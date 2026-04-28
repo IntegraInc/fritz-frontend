@@ -1,0 +1,2 @@
+# fritz-frontend
+Fritz dashboard
