@@ -25,7 +25,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen bg-fritz-stone-50 text-fritz-stone-900">
-      <section className="hidden min-h-screen flex-1 items-center justify-center bg-gradient-to-br from-fritz-green-900 via-fritz-bright-800 to-fritz-bright-950 lg:flex">
+      <section className="hidden min-h-screen flex-1 items-center justify-center bg-linear-to-br from-fritz-green-900 via-fritz-bright-800 to-fritz-bright-950 lg:flex">
         <div className="flex flex-col items-center text-center">
           <div className="rounded-2xl border border-white/20 bg-white/10 px-8 py-6 shadow-lg backdrop-blur-md">
             <h1 className="text-4xl font-black italic tracking-tight text-white">
@@ -41,7 +41,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <section className="flex min-h-screen w-full items-center justify-center px-6 py-10 lg:w-[520px]">
+      <section className="flex min-h-screen w-full items-center justify-center px-6 py-10 lg:w-520px">
         <form
           onSubmit={handleLogin}
           className="w-full max-w-md rounded-3xl border border-fritz-stone-200 bg-white p-8 shadow-xl"

@@ -1,11 +1,9 @@
-import { Sidebar } from "@/components/Sidebar";
 import { ProductsTable } from "@/components/ProductsTable";
 import { products } from "@/data/products";
 
 export default function ProdutosPage() {
   return (
     <main className="flex min-h-screen bg-fritz-stone-50">
-      <Sidebar />
 
       <section className="flex-1">
         <header className="flex items-center justify-between border-b border-fritz-stone-200 bg-white px-10 py-5 shadow-sm">

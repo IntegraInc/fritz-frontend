@@ -1,12 +1,40 @@
 @import "tailwindcss";
+@import "../../tailgrids.css";
+
+@theme {
+ --color-fritz-stone-50: #f7f8f3;
+ --color-fritz-stone-100: #edf0e5;
+ --color-fritz-stone-200: #dce3cf;
+ --color-fritz-stone-400: #9aa886;
+ --color-fritz-stone-500: #758263;
+ --color-fritz-stone-600: #5d684d;
+ --color-fritz-stone-700: #46513a;
+ --color-fritz-stone-800: #303827;
+ --color-fritz-stone-900: #1f281a;
+ --color-fritz-stone-950: #11170d;
+
+ --color-fritz-bright-50: #f2f9e8;
+ --color-fritz-bright-100: #e0f1c7;
+ --color-fritz-bright-600: #6aa323;
+ --color-fritz-bright-700: #51831b;
+ --color-fritz-bright-800: #41691a;
+ --color-fritz-bright-950: #183006;
+
+ --color-fritz-green-50: #eff8ed;
+ --color-fritz-green-600: #3f8b3c;
+ --color-fritz-green-700: #306c31;
+ --color-fritz-green-800: #285629;
+ --color-fritz-green-900: #214723;
+
+ --color-fritz-yellow-300: #f5d565;
+ --color-fritz-yellow-500: #dca923;
+}
 
 :root {
  --background: #f4f6f1;
  --foreground: #17381f;
  color-scheme: light;
 }
-
-/* mantém seu @theme inline aqui */
 
 html,
 body {
