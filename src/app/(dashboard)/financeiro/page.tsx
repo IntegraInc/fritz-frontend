@@ -1,4 +1,8 @@
 import FinancialChart from "@/components/charts/financialChart";
+import { Card } from "@/components/tailgrids/core/card";
+import { Button } from "@/components/tailgrids/core/button";
+import { TransactionsTable } from "@/components/TransactionsTable";
+import { PageHeader } from "@/components/PageHeader";
 
 const cards = [
   { title: "Receita Total", value: "R$ 128.450,00", variation: "+12,5%" },
@@ -45,140 +49,97 @@ const charts = [
 
 export default function FinanceiroPage() {
   return (
-    <main className="min-h-screen bg-fritz-stone-50 text-fritz-stone-900">
-      <section className="border-b border-fritz-stone-200 bg-white px-8 py-6">
-        <h1 className="text-3xl font-bold text-fritz-stone-950">
-          Dashboard Financeira
-        </h1>
-        <p className="mt-1 text-sm text-fritz-stone-500">
-          Visão geral dos indicadores financeiros da empresa.
-        </p>
-      </section>
-
-      <section className="space-y-8 p-8">
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {cards.map((card) => (
-            <div
-              key={card.title}
-              className="rounded-2xl border border-fritz-stone-200 bg-white p-6 shadow-sm"
-            >
-              <p className="text-sm font-medium text-fritz-stone-500">
-                {card.title}
-              </p>
-
-              <div className="mt-4 flex items-end justify-between">
-                <h2 className="text-2xl font-bold text-fritz-stone-950">
-                  {card.value}
-                </h2>
-
-                <span className="rounded-full bg-fritz-green-50 px-3 py-1 text-xs font-bold text-fritz-bright-800">
-                  {card.variation}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-3">
-          <div className="rounded-2xl border border-fritz-stone-200 bg-white p-6 shadow-sm xl:col-span-2">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-fritz-stone-950">
-                  Fluxo financeiro
-                </h2>
-                <p className="text-sm text-fritz-stone-500">
-                  Receita x despesas dos últimos meses.
-                </p>
-              </div>
-
-              <button className="rounded-xl bg-fritz-bright-700 px-4 py-2 text-sm font-semibold text-white hover:bg-fritz-bright-800">
-                Exportar
-              </button>
-            </div>
-
-            <FinancialChart charts={charts} />
+    <div className="flex min-h-screen bg-fritz-stone-50 w-full text-fritz-stone-900">
+      <main className="flex-1 p-8 overflow-y-auto w-full">
+        <div className="mx-auto w-full">
+          
+          {/* HEADER DENTRO DA ÁREA PROTEGIDA */}
+          <div className="mb-8">
+            <PageHeader 
+              title="Dashboard Financeira" 
+              description="Visão geral dos indicadores financeiros da empresa."
+              badgeText="Integrado ao ERP Senior"
+            />
           </div>
 
-          <div className="rounded-2xl border border-fritz-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-fritz-stone-950">
-              Resumo
-            </h2>
-
-            <div className="mt-6 space-y-4">
-              <div>
-                <div className="mb-2 flex justify-between text-sm">
-                  <span className="text-fritz-stone-500">Meta mensal</span>
-                  <strong>78%</strong>
-                </div>
-                <div className="h-3 rounded-full bg-fritz-stone-100">
-                  <div className="h-3 w-[78%] rounded-full bg-fritz-bright-700" />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex justify-between text-sm">
-                  <span className="text-fritz-stone-500">Recebimentos</span>
-                  <strong>64%</strong>
-                </div>
-                <div className="h-3 rounded-full bg-fritz-stone-100">
-                  <div className="h-3 w-[64%] rounded-full bg-fritz-green-600" />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex justify-between text-sm">
-                  <span className="text-fritz-stone-500">Despesas</span>
-                  <strong>42%</strong>
-                </div>
-                <div className="h-3 rounded-full bg-fritz-stone-100">
-                  <div className="h-3 w-[42%] rounded-full bg-fritz-yellow-500" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm">
-          <div className="border-b border-fritz-stone-200 p-6">
-            <h2 className="text-xl font-bold text-fritz-stone-950">
-              Últimas movimentações
-            </h2>
-          </div>
-
-          <table className="w-full text-sm">
-            <thead className="bg-fritz-stone-100 text-left">
-              <tr>
-                <th className="px-6 py-4">Código</th>
-                <th className="px-6 py-4">Descrição</th>
-                <th className="px-6 py-4">Categoria</th>
-                <th className="px-6 py-4">Data</th>
-                <th className="px-6 py-4">Valor</th>
-                <th className="px-6 py-4">Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {transactions.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-t border-fritz-stone-200 hover:bg-fritz-green-50"
-                >
-                  <td className="px-6 py-4 font-semibold">{item.id}</td>
-                  <td className="px-6 py-4">{item.descricao}</td>
-                  <td className="px-6 py-4">{item.categoria}</td>
-                  <td className="px-6 py-4">{item.data}</td>
-                  <td className="px-6 py-4 font-bold">{item.valor}</td>
-                  <td className="px-6 py-4">
+          {/* O CONTEÚDO MANTÉM A LÓGICA DO SPACE-Y DO FINANCEIRO */}
+          <div className="space-y-8">
+            
+            {/* Linha 1: Cards Superiores */}
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {cards.map((card) => (
+                <Card key={card.title} className="border border-fritz-stone-200 bg-white p-6 shadow-sm md:min-w-0">
+                  <p className="text-sm font-medium text-fritz-stone-500">{card.title}</p>
+                  <div className="mt-4 flex items-end justify-between">
+                    <h2 className="text-2xl font-bold text-fritz-stone-950">{card.value}</h2>
                     <span className="rounded-full bg-fritz-green-50 px-3 py-1 text-xs font-bold text-fritz-bright-800">
-                      {item.status}
+                      {card.variation}
                     </span>
-                  </td>
-                </tr>
+                  </div>
+                </Card>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Linha 2: Gráfico e Resumo */}
+            <div className="grid gap-6 xl:grid-cols-3">
+              <Card className="border border-fritz-stone-200 bg-white p-6 shadow-sm xl:col-span-2">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-fritz-stone-950">Fluxo financeiro</h2>
+                    <p className="text-sm text-fritz-stone-500">Receita x despesas dos últimos meses.</p>
+                  </div>
+                  <Button className="border-transparent bg-fritz-bright-700 text-white shadow-sm hover:bg-fritz-bright-800">
+                    Exportar
+                  </Button>
+                </div>
+                <FinancialChart charts={charts} />
+              </Card>
+
+              <Card className="border border-fritz-stone-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-fritz-stone-950">Resumo</h2>
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span className="text-fritz-stone-500">Meta mensal</span>
+                      <strong>78%</strong>
+                    </div>
+                    <div className="h-3 rounded-full bg-fritz-stone-100">
+                      <div className="h-3 w-[78%] rounded-full bg-fritz-bright-700" />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span className="text-fritz-stone-500">Recebimentos</span>
+                      <strong>64%</strong>
+                    </div>
+                    <div className="h-3 rounded-full bg-fritz-stone-100">
+                      <div className="h-3 w-[64%] rounded-full bg-fritz-green-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span className="text-fritz-stone-500">Despesas</span>
+                      <strong>42%</strong>
+                    </div>
+                    <div className="h-3 rounded-full bg-fritz-stone-100">
+                      <div className="h-3 w-[42%] rounded-full bg-fritz-yellow-500" />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Linha 3: Tabela */}
+            <Card className="border border-fritz-stone-200 bg-white shadow-sm overflow-hidden">
+              <div className="border-b border-fritz-stone-200 p-6">
+                <h2 className="text-xl font-bold text-fritz-stone-950">Últimas movimentações</h2>
+              </div>
+              <TransactionsTable data={transactions} />
+            </Card>
+
+          </div>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
