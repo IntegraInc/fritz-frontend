@@ -49,7 +49,6 @@ const ThOrdenavel = ({ label, sortKey, larguraInicial = "auto", sortConfig, alig
       setLargura(larguraSalva);
     }
   }, [storageKey]);
-  //teste
 
   const iniciarRedimensionamento = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -204,67 +203,62 @@ export default function ProdutosPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []); 
 
-  // MÁGICA REAL DO TOUR: Ouve a tabela carregar para disparar!
   useEffect(() => {
-    // Só inicia se não estiver carregando E já tiver produtos na tela
     if (loading || loadingContexto || produtos.length === 0) return;
 
-    const tourConcluido = localStorage.getItem("fritz_tour_produtos_final");
+    const tourConcluido = localStorage.getItem("fritz_tour_produtos_v2");
     if (tourConcluido) return;
 
     const driverObj = driver({
       showProgress: true,
       animate: true,
-      nextBtnText: 'Próximo &rarr;',
-      prevBtnText: '&larr; Anterior',
-      doneBtnText: 'Começar a usar!',
+      nextBtnText: 'Avançar',
+      prevBtnText: 'Voltar',
+      doneBtnText: 'Concluir',
       steps: [
         { 
           popover: { 
-            title: 'Boas-vindas ao Portal Fritz! 🚀', 
-            description: 'Construímos um arsenal de ferramentas de alta performance para acelerar sua rotina. Que tal um tour de 30 segundos pelos seus novos superpoderes?' 
+            title: 'Bem-vindo ao Portal Fritz', 
+            description: 'Preparamos este tour rápido para apresentar as principais funcionalidades da plataforma e demonstrar como elas podem otimizar sua rotina operacional.' 
           } 
         },
         { 
           element: '#tour-sidebar-troca', 
           popover: { 
-            title: 'Múltiplos Ambientes num Clique 🏢', 
-            description: 'Chega de fazer login várias vezes. Clique em "Trocar" a qualquer momento no menu lateral para navegar entre Empresas e Filiais.' 
+            title: 'Navegação Multiempresa', 
+            description: 'Alterne rapidamente entre diferentes Empresas e Filiais utilizando o botão "Trocar" no menu lateral, sem a necessidade de realizar um novo login ou sair da tela atual.' 
           } 
         },
         { 
           element: '#tour-badge-erp', 
           popover: { 
-            title: 'Sincronia Perfeita com o Senior ⚡', 
-            description: 'Seus dados estão vivos! Tudo o que você opera aqui reflete a realidade do seu ERP Senior em tempo real.' 
+            title: 'Integração em Tempo Real', 
+            description: 'Garantia de consistência: todas as informações apresentadas nesta interface refletem o status exato e instantâneo da base de dados do ERP Senior.' 
           } 
         },
         { 
           element: '#tour-caixa-busca', 
           popover: { 
-            title: 'Busca Automática (Live Search) 🔍', 
-            description: 'Digite o que precisa e o sistema busca sozinho.<br><br>🔥 <b>Dica Ninja:</b> Aperte a tecla <b>[ / ]</b> de qualquer lugar para focar na busca instantaneamente!' 
+            title: 'Pesquisa Dinâmica', 
+            description: 'O sistema realiza o filtro automático dos dados à medida que você digita.<br><br>💡 <b>Dica de eficiência:</b> Pressione a tecla <b>[ / ]</b> de qualquer lugar para direcionar o foco do teclado imediatamente para este campo.' 
           } 
         },
         { 
           element: '#tour-cabecalho-tabela', 
           popover: { 
-            title: 'Tabela Flexível e Inteligente ↕️', 
-            description: 'Clique no título de qualquer coluna para <b>ordenar de A-Z</b>. A descrição ficou curta? Clique na bordinha direita da coluna e <b>arraste para redimensionar!</b>' 
+            title: 'Visualização Personalizada', 
+            description: 'Clique nos títulos das colunas para alternar a <b>ordenação (A-Z ou Maior/Menor)</b>. Você também pode clicar nas bordas verticais das colunas e <b>arrastar para redimensioná-las</b> conforme a sua necessidade.' 
           } 
         },
         { 
-          // MÁGICA: Seleciona exatamente a PRIMEIRA linha gerada pelo React
           element: '#tour-tabela-produtos tbody tr:nth-child(1)', 
           popover: { 
-            title: 'Foco e Produtividade Máxima 🎯', 
-            description: '<b>Clique em qualquer linha</b> para destacá-la com um marcador amarelo e não se perder na leitura.<br><br>🪄 <b>Mágica:</b> Clique em qualquer <b>Código de Produto</b> para copiá-lo direto para sua área de transferência!' 
+            title: 'Ações Diretas nas Linhas', 
+            description: '<b>Clique em qualquer linha</b> para aplicar um destaque visual, facilitando a leitura e conferência de dados em cenários com múltiplos monitores.<br><br>💡 <b>Atalho:</b> Clique diretamente sobre o <b>Código do Produto</b> para copiá-lo para a área de transferência do seu dispositivo.' 
           },
-          // Quando chegar nesse passo, força o estado do React a "pintar" a primeira linha
           onHighlightStarted: () => {
             if (produtos[0]) setLinhaDestacada(produtos[0].code);
           },
-          // Quando sair do passo, limpa a pintura
           onDeselected: () => {
             setLinhaDestacada(null);
           }
@@ -272,28 +266,25 @@ export default function ProdutosPage() {
         { 
           element: '#tour-paginacao', 
           popover: { 
-            title: 'Navegação sem Engasgos 📄', 
-            description: 'Navegue por catálogos gigantescos sem travar sua máquina. Ao avançar de página, o sistema rola a tela de volta para o topo automaticamente para você.' 
+            title: 'Rolagem Otimizada', 
+            description: 'Nossa estrutura permite a navegação fluida por grandes volumes de registros. Ao transitar entre as páginas, o sistema reposiciona sua visualização automaticamente para o topo do catálogo.' 
           } 
         }
       ],
       onDestroyStarted: () => {
-        localStorage.setItem("fritz_tour_produtos_final", "true");
+        localStorage.setItem("fritz_tour_produtos_v2", "true");
         driverObj.destroy();
       }
     });
 
-    // Dá 500ms só pro navegador respirar e desenhar a tabela na tela
     setTimeout(() => {
       driverObj.drive();
     }, 500);
 
-  }, [loading, loadingContexto, produtos]); // O segredo está aqui: o useEffect escuta os dados!
+  }, [loading, loadingContexto, produtos]);
 
-  // Função manual para o botão "Ver Tour" (caso a pessoa queira rever)
   function forcarTour() {
-    localStorage.removeItem("fritz_tour_produtos_final");
-    // Força um pequeno refresh no estado para o useEffect rodar novamente
+    localStorage.removeItem("fritz_tour_produtos_v2");
     buscarProdutos(1, busca);
   }
 
@@ -349,26 +340,16 @@ export default function ProdutosPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-fritz-stone-50 w-full">
+    <div className="flex min-h-screen bg-fritz-stone-50 w-full relative">
       <main className="flex-1 p-8 overflow-y-auto w-full">
         <div className="mx-auto w-full">
           
-          <div className="mb-8 flex flex-col md:flex-row md:items-start justify-between gap-4">
-            <div id="tour-badge-erp" className="flex-1">
-              <PageHeader 
-                title="Consulta de Produtos" 
-                description="Gerencie custos, comissões e impostos do catálogo da empresa."
-                badgeText="Integrado ao ERP Senior"
-              />
-            </div>
-            
-            <button 
-              onClick={forcarTour}
-              className="flex items-center gap-2 rounded-xl bg-white border border-fritz-stone-200 px-4 py-2 text-sm font-semibold text-fritz-stone-600 shadow-sm transition-colors hover:bg-fritz-stone-50 hover:text-fritz-bright-700"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              Ver Tour
-            </button>
+          <div id="tour-badge-erp" className="mb-8">
+            <PageHeader 
+              title="Consulta de Produtos" 
+              description="Gerencie custos, comissões e impostos do catálogo da empresa."
+              badgeText="Integrado ao ERP Senior"
+            />
           </div>
 
           <div id="tour-caixa-busca" className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-fritz-stone-200">
@@ -395,7 +376,6 @@ export default function ProdutosPage() {
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                   )}
-                  
 
                   {loading && (
                     <svg className="animate-spin h-4 w-4 text-fritz-stone-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -439,7 +419,7 @@ export default function ProdutosPage() {
                     <ThOrdenavel label="Lucro" sortKey="profit" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-fritz-stone-100 bg-white relative z-0">
+                <tbody id="tour-corpo-tabela" className="divide-y divide-fritz-stone-100 bg-white relative z-0">
                   
                   {(loadingContexto || (loading && produtos.length === 0)) ? (
                     Array.from({ length: 10 }).map((_, index) => (
@@ -546,6 +526,72 @@ export default function ProdutosPage() {
 
         </div>
       </main>
+
+      {/* NOVO BOTÃO FLUTUANTE EXPANSÍVEL NO TOPO DIREITO */}
+      <button
+        onClick={forcarTour}
+        className="fixed top-8 right-8 z-40 group flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md border border-fritz-stone-200 p-3 text-fritz-stone-500 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 hover:bg-white hover:text-fritz-bright-700 hover:border-fritz-bright-200 hover:shadow-[0_8px_30px_rgb(81,131,27,0.2)] hover:scale-105 focus:outline-none"
+        title="Dicas de uso da tela"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-semibold transition-all duration-300 group-hover:max-w-[150px] group-hover:ml-2 group-hover:mr-1">
+          Dicas da Tela
+        </span>
+      </button>
+
+      {/* ESTILIZAÇÃO CUSTOMIZADA DO DRIVER.JS PARA VISUAL PREMIUM */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .driver-popover {
+          border-radius: 1rem !important;
+          padding: 1.5rem !important;
+          border: 1px solid #e5e7eb !important;
+          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+          font-family: inherit !important;
+        }
+        .driver-popover-title {
+          font-size: 1.125rem !important;
+          font-weight: 700 !important;
+          color: #1c1917 !important;
+          margin-bottom: 0.5rem !important;
+        }
+        .driver-popover-description {
+          font-size: 0.875rem !important;
+          color: #57534e !important;
+          line-height: 1.5 !important;
+        }
+        .driver-popover-footer {
+          margin-top: 1.25rem !important;
+        }
+        .driver-popover-footer button {
+          border-radius: 0.5rem !important;
+          font-weight: 600 !important;
+          font-size: 0.875rem !important;
+          padding: 0.5rem 1rem !important;
+          text-shadow: none !important;
+          transition: all 0.2s !important;
+        }
+        .driver-popover-next-btn {
+          background-color: #51831b !important;
+          color: #ffffff !important;
+          border: none !important;
+        }
+        .driver-popover-next-btn:hover {
+          background-color: #3f6814 !important;
+        }
+        .driver-popover-prev-btn {
+          background-color: #f5f5f4 !important;
+          color: #44403c !important;
+          border: 1px solid #e7e5e4 !important;
+        }
+        .driver-popover-prev-btn:hover {
+          background-color: #e7e5e4 !important;
+        }
+        .driver-popover-progress-text {
+          font-size: 0.75rem !important;
+          color: #a8a29e !important;
+          font-weight: 600 !important;
+        }
+      `}} />
     </div>
   );
 }
