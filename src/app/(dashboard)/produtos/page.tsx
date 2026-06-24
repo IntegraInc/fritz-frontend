@@ -608,7 +608,7 @@ export default function ProdutosPage() {
                       onChange={(e) => setBulkField(e.target.value as keyof Product)}
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
                     >
-                      <option value="average">Custo Médio (R$)</option>
+                      <option value="average">Custo Priorize (R$)</option>
                       {/* Removido o Preço Base daqui */}
                       <option value="fixedCoast">Custo Fixo (%)</option>
                       <option value="inboundIcms">ICMS - Entrada (%)</option>
@@ -724,8 +724,8 @@ export default function ProdutosPage() {
                       
                       <ThOrdenavel label="Data Últ. Entrada" sortKey="lastInboundDate" larguraInicial="140px" align="center" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Última Entrada" sortKey="lastInboundPrice" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
-                      <ThOrdenavel label="Custo Médio" sortKey="average" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
-                      <ThOrdenavel label="Preço Base Venda" sortKey="basePrice" larguraInicial="160px" align="right" sortConfig={sortConfig} onSort={handleSort} />
+                      <ThOrdenavel label="Custo Priorize" sortKey="average" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
+                      <ThOrdenavel label="Preço Venda" sortKey="basePrice" larguraInicial="160px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       
                       <ThOrdenavel label="ICMS-(E)" sortKey="inboundIcms" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="PIS/COF-(E)" sortKey="inboundCofinsAndPis" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
