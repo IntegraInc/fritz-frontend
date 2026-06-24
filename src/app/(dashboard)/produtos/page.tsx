@@ -482,8 +482,11 @@ export default function ProdutosPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []); 
 
+  // 1. Crie esta referência para podermos rastrear e destruir o tour se necessário
+  const tourInstanceRef = useRef<any>(null);
+
   function dispararTour() {
-    const driverObj = driver({
+    tourInstanceRef.current = driver({
       showProgress: true,
       animate: true,
       nextBtnText: 'Avançar',
@@ -520,11 +523,34 @@ export default function ProdutosPage() {
       ],
       onDestroyStarted: () => {
         localStorage.setItem("fritz_tour_produtos_v8", "true");
-        driverObj.destroy();
+        if (tourInstanceRef.current) {
+          tourInstanceRef.current.destroy();
+        }
       }
     });
-    driverObj.drive();
+    
+    tourInstanceRef.current.drive();
   }
+
+  useEffect(() => {
+    // 2. Trava de segurança: só dispara se tiver token (estiver logado)
+    const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
+    
+    if (!token || loading || loadingContexto || produtos.length === 0) return;
+    
+    const tourConcluido = localStorage.getItem("fritz_tour_produtos_v8");
+    if (tourConcluido) return;
+    
+    const timeout = setTimeout(() => { dispararTour(); }, 500);
+
+    // 3. Função de limpeza: destrói o tour instantaneamente se houver redirecionamento
+    return () => {
+      clearTimeout(timeout);
+      if (tourInstanceRef.current) {
+        tourInstanceRef.current.destroy();
+      }
+    };
+  }, [loading, loadingContexto, produtos]);
 
   useEffect(() => {
     if (loading || loadingContexto || produtos.length === 0) return;
