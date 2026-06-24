@@ -835,7 +835,7 @@ export default function ProdutosPage() {
                               <CelulaInteligente tipo="text" valor={produto.description} onChange={(val: string) => handleEdit(produtoBase, "description", val)} />
                             </td>
 
-                            <td className="px-4 py-4 align-middle text-fritz-stone-500 text-center select-none text-xs font-medium">
+                            <td className="px-4 py-4 align-middle text-fritz-stone-700 text-center select-none text-sm font-medium">
                               {produto.lastInboundDate || "-"}
                             </td>
                             <td className="px-4 py-4 align-middle font-medium text-fritz-stone-600 text-right select-none">
@@ -868,11 +868,11 @@ export default function ProdutosPage() {
                               <CelulaInteligente tipo="porcentagem" align="right" valor={produto.profit} onChange={(val: number) => handleEdit(produtoBase, "profit", val)} />
                             </td>
 
-                            <td className="px-4 py-4 align-middle text-xs text-fritz-stone-500 select-none truncate" title={`Modificado por: ${produto.lastUpdateUser || 'Não informado'}`}>
+                            <td className="px-4 py-4 align-middle text-sm text-fritz-stone-500 select-none truncate" title={`Modificado por: ${produto.lastUpdateUser || 'Não informado'}`}>
                               {produto.lastUpdateDate ? (
                                 <div className="flex flex-col gap-0.5">
                                   <span className="font-medium text-fritz-stone-700">{produto.lastUpdateDate} às {produto.lastUpdateTime || "00:00"}</span>
-                                  <span className="text-[10px] uppercase text-fritz-stone-400 font-mono tracking-wide truncate max-w-[180px]">{produto.lastUpdateUser}</span>
+                                  <span className="text-xs uppercase text-fritz-stone-500 font-mono tracking-wide truncate max-w-[180px]">{produto.lastUpdateUser}</span>
                                 </div>
                               ) : (
                                 <span className="text-fritz-stone-300">-</span>
