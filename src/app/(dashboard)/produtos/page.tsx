@@ -143,7 +143,6 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
     onChange(novoValor);
   };
 
-  // TIPAGEM CORRIGIDA COM <HTMLInputElement> PARA HABILITAR O BLUR
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') e.currentTarget.blur();
   };
@@ -428,7 +427,6 @@ export default function ProdutosPage() {
     }
   }
 
-  // CONTROLE DOS SELECIONADOS INDIVIDUAIS
   function toggleSelecionar(codigo: string) {
     const novosSelecionados = new Set(selecionados);
     if (novosSelecionados.has(codigo)) novosSelecionados.delete(codigo);
@@ -482,7 +480,6 @@ export default function ProdutosPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []); 
 
-  // 1. Crie esta referência para podermos rastrear e destruir o tour se necessário
   const tourInstanceRef = useRef<any>(null);
 
   function dispararTour() {
@@ -533,7 +530,6 @@ export default function ProdutosPage() {
   }
 
   useEffect(() => {
-    // 2. Trava de segurança: só dispara se tiver token (estiver logado)
     const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
     
     if (!token || loading || loadingContexto || produtos.length === 0) return;
@@ -543,7 +539,6 @@ export default function ProdutosPage() {
     
     const timeout = setTimeout(() => { dispararTour(); }, 500);
 
-    // 3. Função de limpeza: destrói o tour instantaneamente se houver redirecionamento
     return () => {
       clearTimeout(timeout);
       if (tourInstanceRef.current) {
@@ -552,20 +547,12 @@ export default function ProdutosPage() {
     };
   }, [loading, loadingContexto, produtos]);
 
-  useEffect(() => {
-    if (loading || loadingContexto || produtos.length === 0) return;
-    const tourConcluido = localStorage.getItem("fritz_tour_produtos_v8");
-    if (tourConcluido) return;
-    setTimeout(() => { dispararTour(); }, 500);
-  }, [loading, loadingContexto, produtos]);
-
   function handleSort(key: keyof Product) {
     let direction: "asc" | "desc" = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
     setSortConfig({ key, direction });
   }
 
-  // TIPAGEM PROTEGIDA DA ORDENAÇÃO: ISOLANDO A CHAVE E PREVENINDO UNDEFINED
   const produtosOrdenados = [...produtos].sort((a, b) => {
     const key = sortConfig.key;
     if (!key) return 0;
@@ -622,7 +609,7 @@ export default function ProdutosPage() {
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
                     >
                       <option value="average">Custo Médio (R$)</option>
-                      <option value="basePrice">Preço Base (R$)</option>
+                      {/* Removido o Preço Base daqui */}
                       <option value="fixedCoast">Custo Fixo (%)</option>
                       <option value="inboundIcms">ICMS - Entrada (%)</option>
                       <option value="inboundCofinsAndPis">PIS/COFINS - Entrada (%)</option>
@@ -719,7 +706,6 @@ export default function ProdutosPage() {
             <div id="tour-tabela-produtos" ref={secaoTabelaRef} className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden scroll-mt-6 z-10">
               <div ref={scrollInternoRef} className="overflow-auto max-h-[calc(100vh-320px)] relative">
                 <table className="w-full text-left text-sm text-fritz-stone-700 table-fixed min-w-max">
-                  {/* CABEÇALHO DA TABELA TOTALMENTE REORDENADO CONFORME REQUISITADO */}
                   <thead id="tour-cabecalho-tabela" className="bg-fritz-stone-100/50 text-xs font-semibold uppercase tracking-wider text-fritz-stone-500">
                     <tr>
                       <ThOrdenavel label="Check" larguraInicial="60px" align="center">
@@ -736,26 +722,22 @@ export default function ProdutosPage() {
                       <ThOrdenavel id="tour-ordenacao" label="Código" sortKey="code" larguraInicial="140px" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Descrição" sortKey="description" larguraInicial="350px" sortConfig={sortConfig} onSort={handleSort} />
                       
-                      {/* INÍCIO DA NOVA SEQUÊNCIA ESTABELECIDA */}
                       <ThOrdenavel label="Data Últ. Entrada" sortKey="lastInboundDate" larguraInicial="140px" align="center" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Última Entrada" sortKey="lastInboundPrice" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Custo Médio" sortKey="average" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Preço Base Venda" sortKey="basePrice" larguraInicial="160px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       
-                      {/* ENTRADAS (E) */}
                       <ThOrdenavel label="ICMS-(E)" sortKey="inboundIcms" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="PIS/COF-(E)" sortKey="inboundCofinsAndPis" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="IPI-(E)" sortKey="inboundIpi" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Frete-(E)" sortKey="inboundFreight" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       
-                      {/* SAÍDAS (S) */}
                       <ThOrdenavel label="ICMS-(S)" sortKey="icms" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="IPI-(S)" sortKey="ipi" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="PIS-(S)" sortKey="pis" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="COFINS-(S)" sortKey="cofins" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Frete-(S)" sortKey="freight" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       
-                      {/* PARTE FINAL DO FLUXO LOGÍSTICO */}
                       <ThOrdenavel label="Custo Fixo" sortKey="fixedCoast" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Comissão Interna" sortKey="internalComission" larguraInicial="150px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Comissão Externa" sortKey="externalComission" larguraInicial="150px" align="right" sortConfig={sortConfig} onSort={handleSort} />
@@ -853,7 +835,6 @@ export default function ProdutosPage() {
                               <CelulaInteligente tipo="text" valor={produto.description} onChange={(val: string) => handleEdit(produtoBase, "description", val)} />
                             </td>
 
-                            {/* EXIBIÇÃO CELULAR REORDENADAS CONFORME DIRETRIZ ESTRITA */}
                             <td className="px-4 py-4 align-middle text-fritz-stone-500 text-center select-none text-xs font-medium">
                               {produto.lastInboundDate || "-"}
                             </td>
@@ -863,28 +844,27 @@ export default function ProdutosPage() {
                             <td className="px-4 py-4 align-middle font-medium text-fritz-bright-700">
                               <CelulaInteligente tipo="moeda" align="right" valor={produto.average} onChange={(val: number) => handleEdit(produtoBase, "average", val)} />
                             </td>
-                            <td className="px-4 py-4 align-middle font-bold text-fritz-green-700">
-                              <CelulaInteligente tipo="moeda" align="right" valor={produto.basePrice} onChange={(val: number) => handleEdit(produtoBase, "basePrice", val)} />
+                            
+                            {/* AQUI ESTÁ A MUDANÇA: Preço Base Venda agora é apenas texto formatado, sem CelulaInteligente */}
+                            <td className="px-4 py-4 align-middle font-bold text-fritz-green-700 text-right select-none">
+                              {formatarMoeda(produto.basePrice)}
                             </td>
 
-                            {/* ENTRADAS (E) */}
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.inboundIcms} onChange={(val: number) => handleEdit(produtoBase, "inboundIcms", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.inboundCofinsAndPis} onChange={(val: number) => handleEdit(produtoBase, "inboundCofinsAndPis", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.inboundIpi} onChange={(val: number) => handleEdit(produtoBase, "inboundIpi", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.inboundFreight} onChange={(val: number) => handleEdit(produtoBase, "inboundFreight", val)} /></td>
 
-                            {/* SAÍDAS (S) */}
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.icms} onChange={(val: number) => handleEdit(produtoBase, "icms", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.ipi} onChange={(val: number) => handleEdit(produtoBase, "ipi", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.pis} onChange={(val: number) => handleEdit(produtoBase, "pis", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.cofins} onChange={(val: number) => handleEdit(produtoBase, "cofins", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.freight} onChange={(val: number) => handleEdit(produtoBase, "freight", val)} /></td>
 
-                            {/* DEMAIS TAXAS E FECHAMENTO DO MARCUP */}
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.fixedCoast} onChange={(val: number) => handleEdit(produtoBase, "fixedCoast", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.internalComission} onChange={(val: number) => handleEdit(produtoBase, "internalComission", val)} /></td>
                             <td className="px-4 py-4 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={produto.externalComission} onChange={(val: number) => handleEdit(produtoBase, "externalComission", val)} /></td>
-                            <td className="px-4 py-4 align-middle font-bold text-fritz-stone-900">
+                            <td className="px-4 py-4 align-middle font-semibold text-fritz-stone-800">
                               <CelulaInteligente tipo="porcentagem" align="right" valor={produto.profit} onChange={(val: number) => handleEdit(produtoBase, "profit", val)} />
                             </td>
 
