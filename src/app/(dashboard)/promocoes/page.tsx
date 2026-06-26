@@ -33,7 +33,7 @@ type Product = {
   lastUpdateDate?: string;
   lastUpdateTime?: string;
   lastUpdateUser?: string;
-  basePricePromo?: number;
+  basePricePromo?: number; // Preço customizado digitado pelo usuário
 };
 
 type SortConfig = {
@@ -87,30 +87,24 @@ const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, 
 
   useEffect(() => {
     const larguraSalva = localStorage.getItem(storageKey);
-    if (larguraSalva) {
-      setLargura(larguraSalva);
-    }
+    if (larguraSalva) setLargura(larguraSalva);
   }, [storageKey]);
 
   const iniciarRedimensionamento = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+    e.preventDefault(); e.stopPropagation();
     const startX = e.pageX;
     const startWidth = thRef.current?.getBoundingClientRect().width || 0;
-    let larguraFinal = largura;
-
+    
     const aoMoverMouse = (moveEvent: MouseEvent) => {
       const novaLargura = Math.max(40, startWidth + (moveEvent.pageX - startX));
-      larguraFinal = `${novaLargura}px`;
-      setLargura(larguraFinal);
+      setLargura(`${novaLargura}px`);
     };
 
     const aoSoltarMouse = () => {
       document.removeEventListener("mousemove", aoMoverMouse);
       document.removeEventListener("mouseup", aoSoltarMouse);
       document.body.style.userSelect = "auto";
-      localStorage.setItem(storageKey, larguraFinal);
+      localStorage.setItem(storageKey, `${thRef.current?.offsetWidth}px`);
     };
 
     document.body.style.userSelect = "none";
@@ -119,18 +113,9 @@ const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, 
   };
 
   return (
-    <th 
-      id={id}
-      ref={thRef}
-      style={{ width: largura, minWidth: largura, maxWidth: largura }}
-      className="sticky top-0 z-20 bg-fritz-stone-100 shadow-[0_1px_0_0_#e5e7eb] group border-r border-transparent hover:border-fritz-stone-200 transition-colors p-0 align-middle"
-    >
-      <div 
-        onClick={() => sortKey && onSort && onSort(sortKey)}
-        className={`flex items-center gap-2 px-4 py-4 ${sortKey ? 'cursor-pointer hover:bg-fritz-stone-200/50' : ''} select-none w-full h-full ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""}`}
-      >
+    <th id={id} ref={thRef} style={{ width: largura, minWidth: largura, maxWidth: largura }} className="sticky top-0 z-20 bg-fritz-stone-100 shadow-[0_1px_0_0_#e5e7eb] group border-r border-transparent hover:border-fritz-stone-200 transition-colors p-0 align-middle">
+      <div onClick={() => sortKey && onSort && onSort(sortKey)} className={`flex items-center gap-2 px-4 py-4 ${sortKey ? 'cursor-pointer hover:bg-fritz-stone-200/50' : ''} select-none w-full h-full ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""}`}>
         {children || <span className="truncate">{label}</span>}
-        
         {sortKey && (
           <div className="flex flex-col shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`${isSorted && sortConfig.direction === 'asc' ? 'text-fritz-bright-700' : 'text-fritz-stone-400 opacity-50'}`}><polyline points="18 15 12 9 6 15"></polyline></svg>
@@ -138,13 +123,7 @@ const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, 
           </div>
         )}
       </div>
-
-      <div 
-        onMouseDown={iniciarRedimensionamento}
-        onClick={(e) => e.stopPropagation()}
-        className="absolute right-0 top-0 h-full w-[6px] cursor-col-resize bg-transparent group-hover:bg-fritz-stone-300 hover:!bg-fritz-bright-600 z-10 transform translate-x-1/2 transition-colors"
-        title="Arraste para redimensionar"
-      />
+      <div onMouseDown={iniciarRedimensionamento} onClick={(e) => e.stopPropagation()} className="absolute right-0 top-0 h-full w-[6px] cursor-col-resize bg-transparent group-hover:bg-fritz-stone-300 hover:!bg-fritz-bright-600 z-10 transform translate-x-1/2 transition-colors" title="Arraste para redimensionar" />
     </th>
   );
 };
@@ -160,9 +139,7 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
   const handleBlur = () => {
     setEditando(false);
     let novoValor: any = valorInput;
-    if (tipo === "moeda" || tipo === "porcentagem" || tipo === "number") {
-      novoValor = novoValor === "" ? 0 : parseFloat(novoValor);
-    }
+    if (tipo === "moeda" || tipo === "porcentagem" || tipo === "number") novoValor = novoValor === "" ? 0 : parseFloat(novoValor);
     onChange(novoValor);
   };
 
@@ -171,37 +148,21 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
   };
 
   let exibicao = valor === null ? "-" : valor;
-  if (tipo === "moeda") {
-    exibicao = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(valor) || 0);
-  } else if (tipo === "porcentagem") {
-    exibicao = `${Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
-  }
+  if (tipo === "moeda") exibicao = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(valor) || 0);
+  else if (tipo === "porcentagem") exibicao = `${Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 
   if (editando) {
     return (
       <div className={`flex items-center gap-1 bg-white ring-2 ring-fritz-bright-600 rounded shadow-sm px-2 py-1 -mx-2`}>
         {prefixo && tipo !== 'moeda' && <span className="text-fritz-stone-400 text-xs font-semibold">{prefixo}</span>}
-        <input
-          type={tipo === "text" ? "text" : "number"}
-          step="any"
-          autoFocus
-          onFocus={(e) => e.target.select()}
-          value={valorInput}
-          onChange={(e) => setValorInput(e.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          className={`bg-transparent outline-none !border-0 !ring-0 !shadow-none text-fritz-stone-900 ${align === "right" ? "text-right" : "text-left"} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium w-full p-0 m-0`}
-        />
+        <input type={tipo === "text" ? "text" : "number"} step="any" autoFocus onFocus={(e) => e.target.select()} value={valorInput} onChange={(e) => setValorInput(e.target.value)} onBlur={handleBlur} onKeyDown={handleKeyDown} className={`bg-transparent outline-none !border-0 !ring-0 !shadow-none text-fritz-stone-900 ${align === "right" ? "text-right" : "text-left"} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium w-full p-0 m-0`} />
         {sufixo && tipo !== 'porcentagem' && <span className="text-fritz-stone-400 text-xs font-semibold">{sufixo}</span>}
       </div>
     );
   }
 
   return (
-    <div 
-      onClick={() => setEditando(true)} 
-      className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white rounded px-2 py-1 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
-    >
+    <div onClick={() => setEditando(true)} className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white rounded px-2 py-1 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}>
       {exibicao}
     </div>
   );
@@ -214,62 +175,34 @@ const ComboboxFamilia = ({ familias = [], valorSelecionado, onChange }: { famili
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setIsOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const familiasFiltradas = familias.filter((f: any) => 
-    f.nome.toLowerCase().includes(buscaInt.toLowerCase()) || 
-    f.codigo.toString().includes(buscaInt)
-  );
-
+  const familiasFiltradas = familias.filter((f: any) => f.nome.toLowerCase().includes(buscaInt.toLowerCase()) || f.codigo.toString().includes(buscaInt));
   const familiaAtual = familias.find((f: any) => f.codigo.toString() === valorSelecionado);
 
   return (
     <div ref={wrapperRef} className="relative w-full h-full">
-      <div 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-full flex items-center justify-between rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none transition hover:bg-white hover:border-fritz-stone-300 cursor-pointer"
-      >
+      <div onClick={() => setIsOpen(!isOpen)} className="w-full h-full flex items-center justify-between rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none transition hover:bg-white hover:border-fritz-stone-300 cursor-pointer">
         <span className="truncate pr-4">{familiaAtual ? `${familiaAtual.codigo} - ${familiaAtual.nome}` : "Todas as Famílias"}</span>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-fritz-stone-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
       </div>
-
       {isOpen && (
         <div className="absolute z-50 mt-2 w-full min-w-[280px] rounded-xl border border-fritz-stone-200 bg-white shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           <div className="p-2 border-b border-fritz-stone-100 bg-fritz-stone-50/50">
-            <input
-              type="text"
-              autoFocus
-              placeholder="Buscar código ou descrição..."
-              value={buscaInt}
-              onChange={(e) => setBuscaInt(e.target.value)}
-              className="w-full rounded-lg border border-fritz-stone-200 bg-white px-3 py-2 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-500 focus:ring-1 focus:ring-fritz-bright-500"
-            />
+            <input type="text" autoFocus placeholder="Buscar código ou descrição..." value={buscaInt} onChange={(e) => setBuscaInt(e.target.value)} className="w-full rounded-lg border border-fritz-stone-200 bg-white px-3 py-2 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-500 focus:ring-1 focus:ring-fritz-bright-500" />
           </div>
           <ul className="max-h-60 overflow-auto py-1">
-            <li 
-              onClick={() => { onChange(""); setIsOpen(false); setBuscaInt(""); }}
-              className={`px-4 py-2.5 text-sm cursor-pointer transition-colors hover:bg-fritz-stone-100 ${valorSelecionado === "" ? "bg-fritz-bright-50 text-fritz-bright-700 font-semibold" : "text-fritz-stone-700"}`}
-            >
-              Todas as Famílias
-            </li>
+            <li onClick={() => { onChange(""); setIsOpen(false); setBuscaInt(""); }} className={`px-4 py-2.5 text-sm cursor-pointer transition-colors hover:bg-fritz-stone-100 ${valorSelecionado === "" ? "bg-fritz-bright-50 text-fritz-bright-700 font-semibold" : "text-fritz-stone-700"}`}>Todas as Famílias</li>
             {familiasFiltradas.length === 0 ? (
               <li className="px-4 py-3 text-sm text-fritz-stone-500 text-center">Nenhuma família encontrada</li>
             ) : (
               familiasFiltradas.map((f: any) => (
-                <li 
-                  key={f.codigo}
-                  onClick={() => { onChange(f.codigo.toString()); setIsOpen(false); setBuscaInt(""); }}
-                  className={`px-4 py-2 text-sm cursor-pointer transition-colors hover:bg-fritz-stone-100 flex items-center gap-2 truncate ${valorSelecionado === f.codigo.toString() ? "bg-fritz-bright-50 text-fritz-bright-700 font-semibold" : "text-fritz-stone-700"}`}
-                  title={`${f.codigo} - ${f.nome}`}
-                >
-                  <span className="shrink-0 w-12 text-fritz-stone-400 text-xs font-mono">{f.codigo}</span> 
-                  <span className="truncate">{f.nome}</span>
+                <li key={f.codigo} onClick={() => { onChange(f.codigo.toString()); setIsOpen(false); setBuscaInt(""); }} className={`px-4 py-2 text-sm cursor-pointer transition-colors hover:bg-fritz-stone-100 flex items-center gap-2 truncate ${valorSelecionado === f.codigo.toString() ? "bg-fritz-bright-50 text-fritz-bright-700 font-semibold" : "text-fritz-stone-700"}`} title={`${f.codigo} - ${f.nome}`}>
+                  <span className="shrink-0 w-12 text-fritz-stone-400 text-xs font-mono">{f.codigo}</span> <span className="truncate">{f.nome}</span>
                 </li>
               ))
             )}
@@ -296,7 +229,7 @@ export default function PromocoesPage() {
   const [tabelaSelecionada, setTabelaSelecionada] = useState("");
   const [validadeSelecionada, setValidadeSelecionada] = useState("");
   
-  // Sub-estados para criação de nova validade no modal
+  // Sub-estados para criação de nova validade
   const [dataInicioNova, setDataInicioNova] = useState("");
   const [dataFimNova, setDataFimNova] = useState("");
   const [gravandoNovaValidade, setGravandoNovaValidade] = useState(false);
@@ -304,8 +237,14 @@ export default function PromocoesPage() {
   // Estados da Lista Geral de Produtos (Passo 1)
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [familiasDropdown, setFamiliasDropdown] = useState<{codigo: string, nome: string}[]>([]);
+  const [tabelasSenior, setTabelasSenior] = useState<{codtpr: string, datini: string, datfim: string}[]>([]);
   const [loading, setLoading] = useState(false);
-  const [salvandoPromocao, setSalvandoPromocao] = useState(false);
+  
+  // Estados de Loading do Passo 3
+  const [salvandoRascunho, setSalvandoRascunho] = useState(false);
+  const [efetivandoPromocao, setEfetivandoPromocao] = useState(false);
+
+  // Paginação e Busca (Passo 1)
   const [busca, setBusca] = useState(""); 
   const [buscaFamilia, setBuscaFamilia] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -313,11 +252,15 @@ export default function PromocoesPage() {
   const [totalRegistros, setTotalRegistros] = useState(0);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: "asc" });
 
-  // O CARRINHO SEGURO: Guarda o objeto completo mapeado pelo código do produto
+  // O CARRINHO SEGURO (Passo 1)
   const [produtosSelecionados, setProdutosSelecionados] = useState<Map<string, Product>>(new Map());
 
-  // OFICINA DE PREÇOS (Passo 3): Rascunhos específicos da promoção em memória
+  // OFICINA DE PREÇOS (Passo 3): Edição e Bulk Edit
   const [rascunhosPromo, setRascunhosPromo] = useState<Record<string, Product>>({});
+  const [selecionadosOficina, setSelecionadosOficina] = useState<Set<string>>(new Set());
+  const [isBulkPromoOpen, setIsBulkPromoOpen] = useState(false);
+  const [bulkPromoField, setBulkPromoField] = useState<keyof Product>("profit");
+  const [bulkPromoValue, setBulkPromoValue] = useState<string>("");
 
   const scrollInternoRef = useRef<HTMLDivElement>(null);
   const inputBuscaRef = useRef<HTMLInputElement>(null);
@@ -330,17 +273,14 @@ export default function PromocoesPage() {
   // Trava de segurança (Apenas Suporte)
   useEffect(() => {
     const usuario = localStorage.getItem("usuario")?.toLowerCase() || "";
-    if (usuario === "suporte" || usuario === "jair") {
-      setAutorizado(true);
-    } else {
-      setAutorizado(false);
-    }
+    if (usuario === "suporte" || usuario === "jair") setAutorizado(true);
+    else setAutorizado(false);
   }, []);
 
-  // Carrega as Famílias do ERP Senior
+  // Carrega Famílias e Tabelas
   useEffect(() => {
     if (!autorizado) return;
-    async function carregarFamilias() {
+    async function carregarDadosIniciais() {
       try {
         const token = localStorage.getItem("token");
         if (!token || !contexto?.empresa?.id) return;
@@ -348,11 +288,16 @@ export default function PromocoesPage() {
         if (res.ok) {
           const data = await res.json();
           const empresaAtual = data.find((e: any) => e.codigo === contexto.empresa.id);
-          if (empresaAtual && empresaAtual.familias) setFamiliasDropdown(empresaAtual.familias);
+          
+          // ATUALIZADO: Agora salva as famílias E as tabelas na memória
+          if (empresaAtual) {
+            if (empresaAtual.familias) setFamiliasDropdown(empresaAtual.familias);
+            if (empresaAtual.tabelasPreco) setTabelasSenior(empresaAtual.tabelasPreco);
+          }
         }
-      } catch (e) { console.error("Erro ao carregar famílias", e); }
+      } catch (e) { console.error("Erro ao carregar dados iniciais", e); }
     }
-    carregarFamilias();
+    carregarDadosIniciais();
   }, [contexto, autorizado]);
 
   // Busca Geral do Catálogo (Passo 1)
@@ -386,20 +331,17 @@ export default function PromocoesPage() {
     if (scrollInternoRef.current) scrollInternoRef.current.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Controle de Seleção Lote/Individual (Passo 1)
-  function toggleSelecionarTodos(e: React.ChangeEvent<HTMLInputElement>) {
+  // Controle do Carrinho (Passo 1)
+  function toggleSelecionarTodosCarrinho(e: React.ChangeEvent<HTMLInputElement>) {
     setProdutosSelecionados(prev => {
       const novoMap = new Map(prev);
-      if (e.target.checked) {
-        produtos.forEach(p => novoMap.set(p.code, p)); 
-      } else {
-        produtos.forEach(p => novoMap.delete(p.code)); 
-      }
+      if (e.target.checked) produtos.forEach(p => novoMap.set(p.code, p)); 
+      else produtos.forEach(p => novoMap.delete(p.code)); 
       return novoMap;
     });
   }
 
-  function toggleSelecionar(produto: Product) {
+  function toggleSelecionarCarrinho(produto: Product) {
     setProdutosSelecionados(prev => {
       const novoMap = new Map(prev);
       if (novoMap.has(produto.code)) novoMap.delete(produto.code);
@@ -414,7 +356,45 @@ export default function PromocoesPage() {
     return () => clearTimeout(temporizadorDebounce);
   }, [busca, buscaFamilia, contexto, loadingContexto, autorizado]);
 
-  // Lógica de Manipulação dos Rascunhos do Simulador (Passo 3)
+  // ==========================================
+  // MATEMÁTICA DA SIMULAÇÃO (MARKUP REAL-TIME)
+  // Espelhando a regra do Senior: InserirIntegracao()
+  // ==========================================
+  function calcularPrecoSimulado(p: Product) {
+    let precoMedio = p.average || 0;
+    
+    // 1. Apura o custo final da entrada considerando as deduções (PCC tem base reduzida pelo ICMS)
+    const pctIcmEnt = p.inboundIcms || 0;
+    const pctPccEnt = p.inboundCofinsAndPis || 0;
+    const pctIpiEnt = p.inboundIpi || 0;
+    const pctFreEnt = p.inboundFreight || 0;
+
+    const valorIcmsEnt = precoMedio * (pctIcmEnt / 100);
+    const basePccEnt = precoMedio - valorIcmsEnt;
+    const valorPccEnt = basePccEnt * (pctPccEnt / 100);
+    const valorIpiEnt = precoMedio * (pctIpiEnt / 100);
+    const valorFreEnt = precoMedio * (pctFreEnt / 100);
+
+    precoMedio = precoMedio - valorIcmsEnt - valorPccEnt + valorIpiEnt + valorFreEnt;
+
+    // 2. Calcula o Markup da Saída (Por dentro)
+    const pctCusFix = p.fixedCoast || 0;
+    const pctLucro = p.profit || 0;
+    const pctIcmsVenda = p.icms || 0;
+    const pctFrete = p.freight || 0;
+    const pctIpi = p.ipi || 0;
+    const pctCofins = p.cofins || 0;
+    const pctPis = p.pis || 0;
+    const pctComInt = p.internalComission || 0;
+    const pctComExt = p.externalComission || 0;
+
+    const somaPercentuais = pctCusFix + pctLucro + pctIcmsVenda + pctFrete + pctIpi + pctCofins + pctPis + pctComInt + pctComExt;
+
+    if (somaPercentuais >= 100) return 0;
+    return precoMedio / (1 - (somaPercentuais / 100));
+  }
+
+  // Edição Unitária no Simulador
   function handleEditPromo(produtoBase: Product, campo: keyof Product, valor: any) {
     setRascunhosPromo(prev => {
       const produtoAtual = prev[produtoBase.code] || { ...produtoBase };
@@ -423,49 +403,189 @@ export default function PromocoesPage() {
   }
 
   // ==========================================
-  // MATEMÁTICA DA SIMULAÇÃO (MARKUP REAL-TIME)
+  // BULK EDIT NO SIMULADOR (PASSO 3)
   // ==========================================
-  function calcularPrecoSimulado(p: Product) {
-    const totalSaidasEProfit = 
-      (p.icms || 0) + (p.ipi || 0) + (p.pis || 0) + (p.cofins || 0) + (p.freight || 0) + 
-      (p.fixedCoast || 0) + (p.internalComission || 0) + (p.externalComission || 0) + (p.profit || 0);
+  function toggleSelecionarTodosOficina(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.checked) {
+      const novos = new Set(selecionadosOficina);
+      produtosNoCarrinhoOrdenados.forEach(p => novos.add(p.code));
+      setSelecionadosOficina(novos);
+    } else {
+      setSelecionadosOficina(new Set());
+    }
+  }
+
+  function toggleSelecionarOficina(codigo: string) {
+    const novos = new Set(selecionadosOficina);
+    novos.has(codigo) ? novos.delete(codigo) : novos.add(codigo);
+    setSelecionadosOficina(novos);
+  }
+
+  function aplicarEdicaoEmMassaPromo(e: FormEvent) {
+    e.preventDefault();
+    const novoValor = parseFloat(bulkPromoValue);
     
-    if (totalSaidasEProfit >= 100) return 0;
-    return p.average / (1 - totalSaidasEProfit / 100);
+    setRascunhosPromo(prev => {
+      const novosRascunhos = { ...prev };
+      selecionadosOficina.forEach(codigo => {
+        const produtoOriginal = produtosSelecionados.get(codigo);
+        if (produtoOriginal) {
+          const base = novosRascunhos[codigo] || produtoOriginal;
+          novosRascunhos[codigo] = { ...base, [bulkPromoField]: novoValor };
+        }
+      });
+      return novosRascunhos;
+    });
+    
+    setIsBulkPromoOpen(false);
+    setBulkPromoValue("");
+    setSelecionadosOficina(new Set());
   }
 
   // ==========================================
-  // TRANSIÇÕES DO WIZARD
+  // TRANSIÇÕES DO WIZARD E APIS DO JULIO
   // ==========================================
   const abrirModalSetup = () => setModalValidadeAberto(true);
   
   async function processarAvancoSimulacao(e: FormEvent) {
     e.preventDefault();
+    const token = localStorage.getItem("token");
+
     if (validadeSelecionada === "NOVA") {
       setGravandoNovaValidade(true);
       try {
-        await new Promise(res => setTimeout(res, 1000)); // Mock do WS1
+        const payloadWS1 = {
+          company: contexto?.empresa.id,
+          tablePrice: tabelaSelecionada,
+          initialDate: dataInicioNova,
+          finalDate: dataFimNova
+        };
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/table-price/create-table-price-validate`, {
+          method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify(payloadWS1)
+        });
+        
+        if (!response.ok) throw new Error("Falha ao criar validade.");
         setValidadeSelecionada(`${dataInicioNova} - ${dataFimNova}`);
-      } catch (err) { console.error(err); }
-      finally { setGravandoNovaValidade(false); }
+      } catch (err) { 
+        alert("Erro ao criar nova validade no Senior.");
+        setGravandoNovaValidade(false);
+        return; 
+      }
+      setGravandoNovaValidade(false);
     }
+
+    // Ao avançar, limpa possíveis rascunhos velhos para carregar fresco do passo 1
+    setRascunhosPromo({});
+    setSelecionadosOficina(new Set());
     setModalValidadeAberto(false);
     setPassoAtual(3);
   }
 
   const voltarParaSelecao = () => { setPassoAtual(1); setModalValidadeAberto(false); };
 
-  async function finalizarEInserirNoSenior() {
-    setSalvandoPromocao(true);
+  // Helper para montar o Payload Final comum às Rotas de Rascunho/Efetivar
+  // Helper para montar o Payload Final comum às Rotas de Rascunho/Efetivar
+  function montarPayloadCampanha() {
+    const dataInicialSplit = (validadeSelecionada.split("-")[0] || "").trim();
+    
+    return {
+      company: String(contexto?.empresa.id || ""), // Garante que vá como String
+      tablePrice: tabelaSelecionada,
+      initialDate: dataInicialSplit,
+      products: produtosNoCarrinhoOrdenados.map(p => {
+        const r = rascunhosPromo[p.code] || p;
+        const precoSimulado = r.basePricePromo !== undefined ? r.basePricePromo : calcularPrecoSimulado(r);
+        
+        // Garante que TODOS os numéricos vão como Number (se nulo/vazio, envia 0)
+        return {
+          code: String(r.code),
+          average: Number(r.average) || 0,
+          icms: Number(r.icms) || 0,
+          externalComission: Number(r.externalComission) || 0,
+          internalComission: Number(r.internalComission) || 0,
+          freight: Number(r.freight) || 0,
+          ipi: Number(r.ipi) || 0,
+          profit: Number(r.profit) || 0,
+          pis: Number(r.pis) || 0,
+          cofins: Number(r.cofins) || 0,
+          inboundIcms: Number(r.inboundIcms) || 0,
+          inboundCofinsAndPis: Number(r.inboundCofinsAndPis) || 0,
+          inboundIpi: Number(r.inboundIpi) || 0,
+          inboundFreight: Number(r.inboundFreight) || 0,
+          fixedCoast: Number(r.fixedCoast) || 0,
+          basePrice: Number(precoSimulado) ? parseFloat(Number(precoSimulado).toFixed(2)) : 0
+        };
+      })
+    };
+  }
+
+  async function salvarRascunhoSenior() {
+    setSalvandoRascunho(true);
+    const token = localStorage.getItem("token");
     try {
-      await new Promise(res => setTimeout(res, 1500)); // Mock do WS2
-      setModalSucessoAberto(true); // Exibe o modal de sucesso bonito
+      const payload = montarPayloadCampanha();
+      
+      console.log("=== PAYLOAD ENVIADO (SALVAR RASCUNHO) ===");
+      console.log(JSON.stringify(payload, null, 2));
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/promotion`, {
+        method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        const erroBackend = await response.json();
+        console.error("⛔ ERRO DO BACKEND:", erroBackend);
+        alert(`O servidor recusou os dados. Olhe o console (F12) para ver o motivo: ${JSON.stringify(erroBackend)}`);
+        throw new Error("Erro na API");
+      }
+      
+      alert("Rascunho de simulação guardado com sucesso na tabela USU_TSIMPRO.");
+    } catch (e) { console.error("Falha:", e); } 
+    finally { setSalvandoRascunho(false); }
+  }
+
+  async function efetivarCampanhaSenior() {
+    setEfetivandoPromocao(true);
+    const token = localStorage.getItem("token");
+    try {
+      const payload = montarPayloadCampanha();
+      
+      // PASSO 1 OBRIGATÓRIO (Exigência do ERP): Salva na tabela de simulação silenciosamente
+      console.log("=== 1. GRAVANDO BASE DE SIMULAÇÃO (RASCUNHO) ===");
+      const responseSimulacao = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/promotion`, {
+        method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify(payload)
+      });
+      
+      if (!responseSimulacao.ok) {
+        const erroBackend = await responseSimulacao.json();
+        console.error("⛔ ERRO NA SIMULAÇÃO:", erroBackend);
+        alert(`O ERP recusou a criação da base: ${JSON.stringify(erroBackend)}`);
+        throw new Error("Erro na API de Simulação");
+      }
+
+      // PASSO 2: Agora sim, com a simulação criada, nós Efetivamos de fato
+      console.log("=== 2. EFETIVANDO CAMPANHA OFICIAL ===");
+      const responseEfetivar = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/assignment`, {
+        method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify(payload)
+      });
+      
+      if (!responseEfetivar.ok) {
+        const erroBackend = await responseEfetivar.json();
+        console.error("⛔ ERRO NA EFETIVAÇÃO:", erroBackend);
+        alert(`O servidor recusou a efetivação. Motivo: ${JSON.stringify(erroBackend)}`);
+        throw new Error("Erro na API de Efetivação");
+      }
+      
+      // Sucesso total nas duas etapas! Mostra o modal.
+      setModalSucessoAberto(true);
       setProdutosSelecionados(new Map());
       setRascunhosPromo({});
+      setSelecionadosOficina(new Set());
+      
     } catch (e) { 
-      alert("Erro ao sincronizar com o banco."); 
+      console.error("Falha no fluxo de efetivação:", e); 
     } finally { 
-      setSalvandoPromocao(false); 
+      setEfetivandoPromocao(false); 
     }
   }
 
@@ -480,9 +600,7 @@ export default function PromocoesPage() {
     setSortConfig({ key, direction });
   }
 
-  // Transforma o Map do Carrinho em Array para a Grid de Simulação (Passo 3)
   const produtosNoCarrinho = Array.from(produtosSelecionados.values());
-  
   const produtosNoCarrinhoOrdenados = produtosNoCarrinho.sort((a, b) => {
     const key = sortConfig.key; if (!key) return 0;
     const valA = rascunhosPromo[a.code]?.[key] ?? a[key];
@@ -493,8 +611,24 @@ export default function PromocoesPage() {
     return sortConfig.direction === "asc" ? 1 : -1;
   });
 
-  const todosDaPaginaSelecionados = produtos.length > 0 && produtos.every(p => produtosSelecionados.has(p.code));
-  const quantidadeSelecionada = produtosSelecionados.size;
+  const todosDoCarrinhoSelecionados = produtos.length > 0 && produtos.every(p => produtosSelecionados.has(p.code));
+  const todosDaOficinaSelecionados = produtosNoCarrinhoOrdenados.length > 0 && produtosNoCarrinhoOrdenados.every(p => selecionadosOficina.has(p.code));
+  const quantidadeCarrinho = produtosSelecionados.size;
+
+  // --- LÓGICA DO MODAL DE TABELAS ---
+  // Extrai apenas os códigos de tabela únicos para o primeiro select
+  const tabelasUnicas = Array.from(new Set(tabelasSenior.map(t => t.codtpr)));
+  // Filtra as validades disponíveis apenas para a tabela selecionada
+  const validadesDisponiveis = tabelasSenior.filter(t => t.codtpr === tabelaSelecionada);
+
+  // Garante que a data do Senior fique no formato BR (DD/MM/AAAA)
+  const formatarDataErp = (dataStr: string) => {
+    if (!dataStr) return "";
+    if (dataStr.includes("/")) return dataStr.split("T")[0];
+    const partes = dataStr.split("T")[0].split("-");
+    if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    return dataStr;
+  };
 
   // Renderização de Bloqueio (Feature Toggle)
   if (autorizado === false) {
@@ -505,10 +639,12 @@ export default function PromocoesPage() {
              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
            </div>
            <h2 className="text-2xl font-black text-fritz-stone-900 mb-2">Módulo em Desenvolvimento</h2>
-           <p className="text-fritz-stone-500 mb-6">O Gerador de Promoções está em de desenvolvimento e em breve estará disponível para sua conta.</p>
-           <Button onClick={() => window.location.href = '/produtos'} className="mx-auto flex justify-center bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-3 px-8 rounded-xl font-bold">
-            Voltar para a Tabela Principal
-            </Button>
+           <p className="text-fritz-stone-500 mb-8">O Gerador de Promoções está em fase final de testes internos e em breve estará disponível para sua conta.</p>
+           <div className="flex w-full justify-center">
+             <Button onClick={() => window.location.href = '/produtos'} className="bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-3 px-8 rounded-xl font-bold">
+               Voltar para a Tabela Principal
+             </Button>
+           </div>
         </div>
       </div>
     );
@@ -526,7 +662,6 @@ export default function PromocoesPage() {
           />
         </div>
 
-        {/* STEPPER VISUAL SUBSTITUINDO O TEXTO "PASSO 1, 2, 3" */}
         <StepperVisual passoAtual={passoAtual} />
 
         {/* ========================================================= */}
@@ -567,7 +702,7 @@ export default function PromocoesPage() {
                     <tr>
                       <ThOrdenavel label="Check" larguraInicial="60px" align="center">
                         <div className="flex items-center justify-center w-full">
-                          <input type="checkbox" checked={todosDaPaginaSelecionados} onChange={toggleSelecionarTodos} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-bright-600 focus:ring-fritz-bright-600 cursor-pointer" />
+                          <input type="checkbox" checked={todosDoCarrinhoSelecionados} onChange={toggleSelecionarTodosCarrinho} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-bright-600 focus:ring-fritz-bright-600 cursor-pointer" />
                         </div>
                       </ThOrdenavel>
                       <ThOrdenavel label="Família" larguraInicial="200px" />
@@ -597,9 +732,9 @@ export default function PromocoesPage() {
                       produtos.map((produto) => {
                         const isSelecionado = produtosSelecionados.has(produto.code);
                         return (
-                          <tr key={produto.code} className={`transition-colors cursor-pointer ${isSelecionado ? "bg-fritz-bright-50/70" : "hover:bg-fritz-stone-50"}`} onClick={() => toggleSelecionar(produto)}>
+                          <tr key={produto.code} className={`transition-colors cursor-pointer ${isSelecionado ? "bg-fritz-bright-50/70" : "hover:bg-fritz-stone-50"}`} onClick={() => toggleSelecionarCarrinho(produto)}>
                             <td className="px-4 py-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
-                              <input type="checkbox" checked={isSelecionado} onChange={() => toggleSelecionar(produto)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-bright-600 focus:ring-fritz-bright-600 cursor-pointer" />
+                              <input type="checkbox" checked={isSelecionado} onChange={() => toggleSelecionarCarrinho(produto)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-bright-600 focus:ring-fritz-bright-600 cursor-pointer" />
                             </td>
                             <td className="px-4 py-4 truncate text-fritz-stone-600 align-middle">
                               {produto.familyCode && <span className="inline-flex items-center justify-center rounded bg-fritz-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-fritz-stone-500 mr-2 border border-fritz-stone-200">{produto.familyCode}</span>}
@@ -629,15 +764,15 @@ export default function PromocoesPage() {
                     </button>
                   </div>
                   
-                  {quantidadeSelecionada > 0 && (
+                  {quantidadeCarrinho > 0 && (
                     <button type="button" onClick={() => setProdutosSelecionados(new Map())} className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors px-2 py-1">
-                      Limpar Seleção ({quantidadeSelecionada})
+                      Limpar Seleção ({quantidadeCarrinho})
                     </button>
                   )}
                 </div>
 
-                <Button onClick={abrirModalSetup} disabled={quantidadeSelecionada === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2.5 rounded-xl font-semibold shadow-sm transition-all">
-                  Configurar Campanha ({quantidadeSelecionada})
+                <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2.5 rounded-xl font-semibold shadow-sm transition-all">
+                  Configurar Campanha ({quantidadeCarrinho})
                 </Button>
               </div>
             </div>
@@ -655,23 +790,42 @@ export default function PromocoesPage() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fritz-bright-100 text-fritz-bright-700 font-bold">2</div>
                   <h3 className="text-xl font-black text-fritz-stone-900">Configurar Campanha</h3>
                 </div>
-                <p className="text-sm text-fritz-stone-500 mb-6">Preencha os dados do Senior para os {quantidadeSelecionada} itens selecionados.</p>
+                <p className="text-sm text-fritz-stone-500 mb-6">Preencha os dados do Senior para os {quantidadeCarrinho} itens selecionados.</p>
                 
                 <form onSubmit={processarAvancoSimulacao} className="space-y-5">
                   <div>
                     <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Tabela de Destino</label>
-                    <select required value={tabelaSelecionada} onChange={(e) => setTabelaSelecionada(e.target.value)} className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100">
+                    <select 
+                      required 
+                      value={tabelaSelecionada} 
+                      // Ao trocar a tabela, limpamos a validade anterior para não dar erro
+                      onChange={(e) => { setTabelaSelecionada(e.target.value); setValidadeSelecionada(""); }} 
+                      className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
+                    >
                       <option value="">Selecione uma tabela...</option>
-                      <option value="TAB_PROMO_SEMANAL">Promoção Semanal Fritz</option>
-                      <option value="TAB_PROMO_MENSAL">Tabela Promocional Mensal</option>
+                      {tabelasUnicas.map(cod => (
+                        <option key={cod} value={cod}>Tabela {cod}</option>
+                      ))}
                     </select>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Validade da Campanha</label>
-                    <select required value={validadeSelecionada} onChange={(e) => setValidadeSelecionada(e.target.value)} className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100">
+                    <select 
+                      required 
+                      value={validadeSelecionada} 
+                      onChange={(e) => setValidadeSelecionada(e.target.value)} 
+                      disabled={!tabelaSelecionada} // Fica bloqueado até escolher a tabela
+                      className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <option value="">Selecione um período...</option>
-                      <option value="01/07/2026 - 07/07/2026">01/07/2026 a 07/07/2026</option>
+                      {validadesDisponiveis.map((val, idx) => {
+                         const dtIni = formatarDataErp(val.datini);
+                         const dtFim = formatarDataErp(val.datfim);
+                         return (
+                           <option key={idx} value={`${dtIni} - ${dtFim}`}>{dtIni} a {dtFim}</option>
+                         );
+                      })}
                       <option value="NOVA" className="font-bold text-fritz-bright-700">+ Criar nova validade no Senior</option>
                     </select>
                   </div>
@@ -706,14 +860,71 @@ export default function PromocoesPage() {
         {/* PASSO 3: SPREADSHEET DE SIMULAÇÃO (OFICINA DE PREÇOS)     */}
         {/* ========================================================= */}
         {passoAtual === 3 && (
-          <div className="bg-white rounded-2xl border border-fritz-stone-200 shadow-sm p-6 flex flex-col flex-1 animate-in fade-in slide-in-from-right-8 duration-300">
+          <div className="bg-white rounded-2xl border border-fritz-stone-200 shadow-sm p-6 flex flex-col flex-1 animate-in fade-in slide-in-from-right-8 duration-300 relative">
+            
+            {/* FLOATING BAR DE EDIÇÃO EM LOTE DA OFICINA */}
+            {selecionadosOficina.size > 0 && (
+              <div className="absolute top-2 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
+                <div className="bg-fritz-stone-900 text-white rounded-full px-6 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.3)] flex items-center gap-4 animate-in slide-in-from-top-4 fade-in duration-300 border border-fritz-stone-700 pointer-events-auto">
+                  <span className="text-sm font-semibold">{selecionadosOficina.size} na fila de edição</span>
+                  <div className="w-px h-4 bg-fritz-stone-700"></div>
+                  <button onClick={() => setIsBulkPromoOpen(true)} className="text-sm font-bold text-fritz-bright-400 hover:text-fritz-bright-300 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                    Aplicar em lote
+                  </button>
+                  <button onClick={() => setSelecionadosOficina(new Set())} className="ml-2 text-fritz-stone-400 hover:text-white transition-colors" title="Limpar seleção">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL DE EDIÇÃO EM LOTE */}
+            {isBulkPromoOpen && (
+              <div className="fixed inset-0 bg-fritz-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
+                <div className="bg-white rounded-2xl shadow-xl w-[400px] overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="p-6">
+                    <h3 className="text-lg font-bold text-fritz-stone-900 mb-1">Atualização em Lote</h3>
+                    <p className="text-sm text-fritz-stone-500 mb-6">Aplica valores simultaneamente nos {selecionadosOficina.size} itens marcados.</p>
+                    
+                    <form onSubmit={aplicarEdicaoEmMassaPromo} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Campo a alterar</label>
+                        <select value={bulkPromoField} onChange={(e) => setBulkPromoField(e.target.value as keyof Product)} className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100">
+                          <option value="profit">Margem de Lucro (%)</option>
+                          <option value="externalComission">Comissão Externa (%)</option>
+                          <option value="internalComission">Comissão Interna (%)</option>
+                          <option value="fixedCoast">Custo Fixo (%)</option>
+                          <option value="basePricePromo">Forçar Preço Final (R$)</option>
+                          <option value="inboundIcms">ICMS - Entrada (%)</option>
+                          <option value="inboundCofinsAndPis">PIS/COFINS - Entrada (%)</option>
+                          <option value="icms">ICMS - Saída (%)</option>
+                          <option value="ipi">IPI - Saída (%)</option>
+                          <option value="pis">PIS - Saída (%)</option>
+                          <option value="cofins">COFINS - Saída (%)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Novo valor</label>
+                        <input type="number" step="any" required value={bulkPromoValue} onChange={(e) => setBulkPromoValue(e.target.value)} placeholder="Digite o número..." className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100" />
+                      </div>
+                      <div className="pt-4 flex gap-3">
+                        <Button type="button" onClick={() => setIsBulkPromoOpen(false)} className="flex-1 bg-white border border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 py-3 rounded-xl">Cancelar</Button>
+                        <Button type="submit" className="flex-1 bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white py-3 rounded-xl">Aplicar Valores</Button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="text-2xl font-black text-fritz-stone-900 tracking-tight">Simulador de Promoção</h2>
+                <h2 className="text-2xl font-black text-fritz-stone-900 tracking-tight">Simulador Estratégico de Margens</h2>
                 <p className="text-sm text-fritz-stone-500 mt-1">Campanha vinculada à tabela <strong className="text-fritz-bright-700 font-bold">{tabelaSelecionada}</strong> ({validadeSelecionada})</p>
               </div>
               <Button onClick={voltarParaSelecao} className="text-sm font-semibold text-fritz-stone-500 hover:text-fritz-stone-900 underline bg-transparent shadow-none border-none p-0 h-auto">
-                ← Voltar para seleção
+                ← Adicionar/remover produtos
               </Button>
             </div>
 
@@ -722,12 +933,15 @@ export default function PromocoesPage() {
                 <table className="w-full text-left text-sm text-fritz-stone-700 table-fixed min-w-max">
                   <thead className="bg-fritz-stone-100/50 text-xs font-semibold uppercase tracking-wider text-fritz-stone-500">
                     <tr>
-                      <ThOrdenavel label="Família" sortKey="familyDescription" larguraInicial="180px" sortConfig={sortConfig} onSort={handleSort} />
+                      <ThOrdenavel label="Check" larguraInicial="60px" align="center">
+                        <div className="flex items-center justify-center w-full">
+                          <input type="checkbox" checked={todosDaOficinaSelecionados} onChange={toggleSelecionarTodosOficina} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-stone-600 focus:ring-fritz-stone-600 cursor-pointer" />
+                        </div>
+                      </ThOrdenavel>
+                      <ThOrdenavel label="Família" sortKey="familyDescription" larguraInicial="200px" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Código" sortKey="code" larguraInicial="110px" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Descrição" sortKey="description" larguraInicial="300px" sortConfig={sortConfig} onSort={handleSort} />
                       
-                      <ThOrdenavel label="Data Últ. Ent." sortKey="lastInboundDate" larguraInicial="120px" align="center" />
-                      <ThOrdenavel label="Última Entrada" sortKey="lastInboundPrice" larguraInicial="130px" align="right" />
                       <ThOrdenavel label="Custo Médio" sortKey="average" larguraInicial="130px" align="right" />
                       
                       <ThOrdenavel label="PREÇO SIMULADO" larguraInicial="160px" align="right">
@@ -757,25 +971,29 @@ export default function PromocoesPage() {
                   <tbody className="divide-y divide-fritz-stone-100 bg-white">
                     {produtosNoCarrinhoOrdenados.map((produtoBase) => {
                       const rascunho = rascunhosPromo[produtoBase.code] || { ...produtoBase };
+                      const isSelecionadoOficina = selecionadosOficina.has(rascunho.code);
+                      
+                      // Executa a conta de markup real-time espelhando a base (PCC Deduzido)
                       const precoSimuladoRealtime = calcularPrecoSimulado(rascunho);
                       const precoFinalPromo = rascunho.basePricePromo !== undefined ? rascunho.basePricePromo : precoSimuladoRealtime;
 
                       return (
-                        <tr key={rascunho.code} className="hover:bg-fritz-stone-50/60 transition-colors">
+                        <tr key={rascunho.code} className={`transition-colors ${isSelecionadoOficina ? "bg-fritz-stone-50" : "hover:bg-fritz-stone-50/60"}`}>
+                          <td className="px-4 py-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                            <input type="checkbox" checked={isSelecionadoOficina} onChange={() => toggleSelecionarOficina(rascunho.code)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-stone-600 focus:ring-fritz-stone-600 cursor-pointer" />
+                          </td>
                           <td className="px-4 py-4 truncate text-fritz-stone-600 align-middle text-xs" title={`${rascunho.familyCode || ''} - ${rascunho.familyDescription || 'Sem Família'}`}>
                             {rascunho.familyCode && (
-                                <span className="inline-flex items-center justify-center rounded bg-fritz-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-fritz-stone-500 mr-2 border border-fritz-stone-200">
+                              <span className="inline-flex items-center justify-center rounded bg-fritz-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-fritz-stone-500 mr-2 border border-fritz-stone-200">
                                 {rascunho.familyCode}
-                                </span>
+                              </span>
                             )}
                             {rascunho.familyDescription || "-"}
-                            </td>
+                          </td>
                           <td className="px-4 py-4 font-mono font-medium text-fritz-stone-800">{rascunho.code}</td>
                           <td className="px-4 py-4 truncate font-medium text-fritz-stone-900">{rascunho.description}</td>
                           
-                          <td className="px-4 py-4 text-center text-xs text-fritz-stone-500 select-none">{rascunho.lastInboundDate || "-"}</td>
-                          <td className="px-4 py-4 text-right text-fritz-stone-600 font-medium select-none">{formatarMoeda(rascunho.lastInboundPrice)}</td>
-                          <td className="px-4 py-4 font-medium text-right text-fritz-bright-700">
+                          <td className="px-4 py-4 font-medium text-right text-fritz-stone-600">
                             <CelulaInteligente tipo="moeda" align="right" valor={rascunho.average} onChange={(v: number) => handleEditPromo(produtoBase, "average", v)} />
                           </td>
 
@@ -810,15 +1028,18 @@ export default function PromocoesPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-fritz-stone-100">
-              <Button onClick={finalizarEInserirNoSenior} disabled={salvandoPromocao} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md">
-                {salvandoPromocao ? (
+            <div className="flex justify-end pt-4 border-t border-fritz-stone-100 gap-4">
+              <Button onClick={salvarRascunhoSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-white border-2 border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                {salvandoRascunho ? "Guardando..." : "Salvar Rascunho"}
+              </Button>
+              <Button onClick={efetivarCampanhaSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md">
+                {efetivandoPromocao ? (
                   <>
                     <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     Inserindo no Senior...
                   </>
                 ) : (
-                  <>Consolidar Promoção no Senior</>
+                  <>Efetivar Campanha Oficial</>
                 )}
               </Button>
             </div>
@@ -837,9 +1058,11 @@ export default function PromocoesPage() {
               <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Promoção Integrada!</h3>
               <p className="text-sm text-fritz-stone-500 mb-8 px-4">Os preços simulados foram enviados ao Senior Sistemas para a tabela <strong className="text-fritz-stone-700">{tabelaSelecionada}</strong> com sucesso.</p>
               
-              <Button onClick={fecharSucesso} className="w-full bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white py-4 rounded-xl font-bold text-base shadow-md">
-                Criar Nova Campanha
-              </Button>
+              <div className="flex w-full justify-center">
+                <Button onClick={fecharSucesso} className="w-full bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white py-4 rounded-xl font-bold text-base shadow-md">
+                  Criar Nova Campanha
+                </Button>
+              </div>
             </div>
           </div>
         )}
