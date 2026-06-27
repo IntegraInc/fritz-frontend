@@ -153,7 +153,7 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
 
   if (editando) {
     return (
-      <div className={`flex items-center gap-1 bg-white ring-2 ring-fritz-bright-600 rounded shadow-sm px-2 py-1 -mx-2`}>
+      <div className={`flex items-center h-[32px] gap-1 bg-white ring-2 ring-fritz-bright-600 rounded shadow-sm px-2 -mx-2`}>
         {prefixo && tipo !== 'moeda' && <span className="text-fritz-stone-400 text-xs font-semibold">{prefixo}</span>}
         <input type={tipo === "text" ? "text" : "number"} step="any" autoFocus onFocus={(e) => e.target.select()} value={valorInput} onChange={(e) => setValorInput(e.target.value)} onBlur={handleBlur} onKeyDown={handleKeyDown} className={`bg-transparent outline-none !border-0 !ring-0 !shadow-none text-fritz-stone-900 ${align === "right" ? "text-right" : "text-left"} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium w-full p-0 m-0`} />
         {sufixo && tipo !== 'porcentagem' && <span className="text-fritz-stone-400 text-xs font-semibold">{sufixo}</span>}
@@ -162,7 +162,7 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
   }
 
   return (
-    <div onClick={() => setEditando(true)} className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white rounded px-2 py-1 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}>
+    <div onClick={() => setEditando(true)} className={`flex items-center h-[32px] cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white rounded px-2 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "justify-end" : "justify-start"}`}>
       {exibicao}
     </div>
   );
@@ -226,7 +226,7 @@ export default function PromocoesPage() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  // Proteção de Rota (Feature Toggle)
+  // Proteção de Rota
   const [autorizado, setAutorizado] = useState<boolean | null>(null);
 
   // Estados de Controle do Wizard e Tabs
@@ -234,6 +234,7 @@ export default function PromocoesPage() {
   const [passoAtual, setPassoAtual] = useState(1);
   const [modalValidadeAberto, setModalValidadeAberto] = useState(false);
   const [modalSucessoAberto, setModalSucessoAberto] = useState(false);
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [tabelaSelecionada, setTabelaSelecionada] = useState("");
   const [validadeSelecionada, setValidadeSelecionada] = useState("");
   
@@ -256,6 +257,7 @@ export default function PromocoesPage() {
   // Estados de Loading do Passo 3
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
   const [efetivandoPromocao, setEfetivandoPromocao] = useState(false);
+  const [excluindoRascunho, setExcluindoRascunho] = useState(false);
 
   // Paginação e Busca (Passo 1)
   const [busca, setBusca] = useState(""); 
@@ -283,14 +285,12 @@ export default function PromocoesPage() {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
   };
 
-  // Trava de segurança
   useEffect(() => {
     const usuario = localStorage.getItem("usuario")?.toLowerCase() || "";
     if (usuario === "suporte" || usuario === "jair") setAutorizado(true);
     else setAutorizado(false);
   }, []);
 
-  // Função isolada para carregar e atualizar dados do Senior em tempo real
   const carregarDadosIniciais = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -308,14 +308,12 @@ export default function PromocoesPage() {
     } catch (e) { console.error("Erro ao carregar dados iniciais", e); }
   };
 
-  // Carrega Famílias e Tabelas no Mount
   useEffect(() => {
     if (autorizado) {
       carregarDadosIniciais();
     }
   }, [contexto, autorizado]);
 
-  // Busca Geral do Catálogo (Passo 1)
   async function buscarProdutos(novaPagina = 1, termoAtual = busca, familiaAtual = buscaFamilia) {
     if (!contexto) return;
     setLoading(true);
@@ -341,7 +339,6 @@ export default function PromocoesPage() {
     }
   }
 
-  // Busca Rascunho via GET + Query Params (INCLUI A CORREÇÃO DO PREÇO)
   async function carregarRascunhoSalvo(e: FormEvent) {
     e.preventDefault();
     if (!tabelaBuscaRascunho || !validadeBuscaRascunho || !contexto) return;
@@ -383,11 +380,9 @@ export default function PromocoesPage() {
 
       itensEncontrados.forEach((p: Product) => {
         novoMapa.set(p.code, p);
-        
-        // CORREÇÃO: Garante que o valor que veio salvo no banco popule a grid visual
         novosRascunhos[p.code] = {
           ...p,
-          basePricePromo: p.basePrice // O preço que ele digitou antes volta preenchido
+          basePricePromo: p.basePrice 
         };
       });
       
@@ -413,7 +408,6 @@ export default function PromocoesPage() {
     if (scrollInternoRef.current) scrollInternoRef.current.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Controle do Carrinho (Passo 1)
   function toggleSelecionarTodosCarrinho(e: React.ChangeEvent<HTMLInputElement>) {
     setProdutosSelecionados(prev => {
       const novoMap = new Map(prev);
@@ -438,9 +432,6 @@ export default function PromocoesPage() {
     return () => clearTimeout(temporizadorDebounce);
   }, [busca, buscaFamilia, contexto, loadingContexto, autorizado, modoTela]);
 
-  // ==========================================
-  // MATEMÁTICA DA SIMULAÇÃO (MARKUP REAL-TIME)
-  // ==========================================
   function calcularPrecoSimulado(p: Product) {
     let precoMedio = p.average || 0;
     
@@ -473,7 +464,6 @@ export default function PromocoesPage() {
     return precoMedio / (1 - (somaPercentuais / 100));
   }
 
-  // Edição Unitária no Simulador
   function handleEditPromo(produtoBase: Product, campo: keyof Product, valor: any) {
     setRascunhosPromo(prev => {
       const produtoAtual = prev[produtoBase.code] || { ...produtoBase };
@@ -481,9 +471,6 @@ export default function PromocoesPage() {
     });
   }
 
-  // ==========================================
-  // BULK EDIT NO SIMULADOR (PASSO 3)
-  // ==========================================
   function toggleSelecionarTodosOficina(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.checked) {
       const novos = new Set(selecionadosOficina);
@@ -522,9 +509,6 @@ export default function PromocoesPage() {
     showToast(`${selecionadosOficina.size} itens atualizados com sucesso!`, "success");
   }
 
-  // ==========================================
-  // TRANSIÇÕES DO WIZARD E APIS DO JULIO
-  // ==========================================
   const abrirModalSetup = () => setModalValidadeAberto(true);
   
   async function processarAvancoSimulacao(e: FormEvent) {
@@ -566,7 +550,6 @@ export default function PromocoesPage() {
 
   const voltarParaSelecao = () => { setPassoAtual(1); setModalValidadeAberto(false); };
 
-  // Helper para montar o Payload Final
   function montarPayloadCampanha() {
     const dataInicialSplit = (validadeSelecionada.split(" - ")[0] || "").trim();
     
@@ -618,6 +601,38 @@ export default function PromocoesPage() {
     }
   }
 
+  async function executarExclusaoRascunho(silencioso = false) {
+    const token = localStorage.getItem("token");
+    if (!silencioso) setExcluindoRascunho(true);
+    try {
+      const dataInicialSplit = (validadeSelecionada.split(" - ")[0] || "").trim();
+      const params = new URLSearchParams({
+        company: String(contexto?.empresa.id || ""),
+        tablePrice: tabelaSelecionada,
+        initialDate: dataInicialSplit
+      });
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/promotion?${params.toString()}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (!response.ok && !silencioso) throw new Error("Falha na exclusão");
+
+      if (!silencioso) {
+        showToast("Rascunho excluído da base com sucesso.", "success");
+        setModalExcluirAberto(false);
+        setPassoAtual(1);
+        setModoTela("RASCUNHOS");
+        setProdutosSelecionados(new Map());
+      }
+    } catch (e) {
+      if (!silencioso) showToast("Erro ao tentar excluir o rascunho.", "error");
+    } finally {
+      if (!silencioso) setExcluindoRascunho(false);
+    }
+  }
+
   async function efetivarCampanhaSenior() {
     setEfetivandoPromocao(true);
     const token = localStorage.getItem("token");
@@ -634,6 +649,8 @@ export default function PromocoesPage() {
       });
       if (!responseEfetivar.ok) throw new Error("Erro na API de Efetivação");
       
+      await executarExclusaoRascunho(true);
+
       setModalSucessoAberto(true);
       setProdutosSelecionados(new Map());
       setRascunhosPromo({});
@@ -672,7 +689,6 @@ export default function PromocoesPage() {
   const todosDaOficinaSelecionados = produtosNoCarrinhoOrdenados.length > 0 && produtosNoCarrinhoOrdenados.every(p => selecionadosOficina.has(p.code));
   const quantidadeCarrinho = produtosSelecionados.size;
 
-  // --- LÓGICA DE TABELAS DINÂMICAS ---
   const tabelasUnicas = Array.from(new Set(tabelasSenior.map(t => t.codtpr)));
   const validadesDisponiveisSetup = tabelasSenior.filter(t => t.codtpr === tabelaSelecionada);
   const validadesDisponiveisBusca = tabelasSenior.filter(t => t.codtpr === tabelaBuscaRascunho);
@@ -707,7 +723,6 @@ export default function PromocoesPage() {
   return (
     <div className="flex min-h-screen bg-fritz-stone-50 w-full relative">
       
-      {/* RENDERIZAÇÃO DO COMPONENTE TOAST MODERNIZADO */}
       {toast.show && (
         <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-right-8 fade-in duration-300">
           <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl shadow-xl border ${
@@ -766,9 +781,6 @@ export default function PromocoesPage() {
 
         <StepperVisual passoAtual={passoAtual} />
 
-        {/* ========================================================= */}
-        {/* PASSO 1: A) CRIAR NOVA CAMPANHA                           */}
-        {/* ========================================================= */}
         {passoAtual === 1 && modoTela === 'NOVA' && (
           <div className="flex flex-col flex-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-fritz-stone-200">
@@ -881,9 +893,6 @@ export default function PromocoesPage() {
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* PASSO 1: B) RESGATAR RASCUNHOS                            */}
-        {/* ========================================================= */}
         {passoAtual === 1 && modoTela === 'RASCUNHOS' && (
           <div className="flex flex-col items-center justify-center flex-1 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="bg-white rounded-3xl shadow-sm border border-fritz-stone-200 w-full max-w-xl overflow-hidden relative">
@@ -950,7 +959,7 @@ export default function PromocoesPage() {
         )}
 
         {/* ========================================================= */}
-        {/* PASSO 2: MODAL DE CONFIGURAÇÃO (TABELA E VALIDADE)        */}
+        {/* MODAL DE CONFIGURAÇÃO (CORRIGIDO: Apenas modalValidadeAberto) */}
         {/* ========================================================= */}
         {modalValidadeAberto && (
           <div className="fixed inset-0 bg-fritz-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
@@ -1025,13 +1034,9 @@ export default function PromocoesPage() {
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* PASSO 3: SPREADSHEET DE SIMULAÇÃO (OFICINA DE PREÇOS)     */}
-        {/* ========================================================= */}
         {passoAtual === 3 && (
           <div className="bg-white rounded-2xl border border-fritz-stone-200 shadow-sm p-6 flex flex-col flex-1 animate-in fade-in slide-in-from-right-8 duration-300 relative">
             
-            {/* FLOATING BAR DE EDIÇÃO EM LOTE DA OFICINA */}
             {selecionadosOficina.size > 0 && (
               <div className="absolute top-2 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
                 <div className="bg-fritz-stone-900 text-white rounded-full px-6 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.3)] flex items-center gap-4 animate-in slide-in-from-top-4 fade-in duration-300 border border-fritz-stone-700 pointer-events-auto">
@@ -1048,7 +1053,6 @@ export default function PromocoesPage() {
               </div>
             )}
 
-            {/* MODAL DE EDIÇÃO EM LOTE */}
             {isBulkPromoOpen && (
               <div className="fixed inset-0 bg-fritz-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
                 <div className="bg-white rounded-2xl shadow-xl w-[400px] overflow-hidden animate-in zoom-in-95 duration-200">
@@ -1196,20 +1200,52 @@ export default function PromocoesPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-fritz-stone-100 gap-4">
-              <Button onClick={salvarRascunhoSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-white border-2 border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]">
-                {salvandoRascunho ? "Guardando..." : "Salvar Rascunho"}
-              </Button>
-              <Button onClick={efetivarCampanhaSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md transition-transform active:scale-[0.98]">
-                {efetivandoPromocao ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    Inserindo no Senior...
-                  </>
-                ) : (
-                  <>Efetivar Campanha Oficial</>
-                )}
-              </Button>
+            <div className="flex justify-between items-center pt-4 border-t border-fritz-stone-100 gap-4">
+              <div>
+                <Button onClick={() => setModalExcluirAberto(true)} className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                  Excluir Rascunho
+                </Button>
+              </div>
+              <div className="flex gap-4">
+                <Button onClick={salvarRascunhoSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-white border-2 border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]">
+                  {salvandoRascunho ? "Guardando..." : "Salvar Rascunho"}
+                </Button>
+                <Button onClick={efetivarCampanhaSenior} disabled={salvandoRascunho || efetivandoPromocao || excluindoRascunho} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md transition-transform active:scale-[0.98]">
+                  {efetivandoPromocao ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                      Inserindo no Senior...
+                    </>
+                  ) : (
+                    <>Efetivar Campanha Oficial</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* MODAL CONFIRMAR EXCLUSÃO DE RASCUNHO                      */}
+        {/* ========================================================= */}
+        {modalExcluirAberto && (
+          <div className="fixed inset-0 bg-fritz-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-[420px] overflow-hidden animate-in zoom-in-95 duration-300 text-center p-8">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100 text-red-600 mb-5 shadow-inner border-4 border-white ring-4 ring-red-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              </div>
+              <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Excluir este rascunho?</h3>
+              <p className="text-sm text-fritz-stone-500 mb-8 px-2">Essa ação irá limpar todas as simulações pendentes para a tabela <strong>{tabelaSelecionada}</strong> com validade em <strong>{validadeSelecionada.split(" - ")[0]}</strong>. Isso não afeta os preços já aprovados.</p>
+              
+              <div className="flex w-full gap-3">
+                <Button onClick={() => setModalExcluirAberto(false)} className="flex-1 bg-white border border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 py-3 rounded-xl font-semibold">
+                  Cancelar
+                </Button>
+                <Button onClick={() => executarExclusaoRascunho(false)} disabled={excluindoRascunho} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
+                  {excluindoRascunho ? "Excluindo..." : "Sim, excluir"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
