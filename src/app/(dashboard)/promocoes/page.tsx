@@ -33,7 +33,7 @@ type Product = {
   lastUpdateDate?: string;
   lastUpdateTime?: string;
   lastUpdateUser?: string;
-  basePricePromo?: number; // Preço customizado digitado pelo usuário
+  basePricePromo?: number;
 };
 
 type SortConfig = {
@@ -219,10 +219,18 @@ const ComboboxFamilia = ({ familias = [], valorSelecionado, onChange }: { famili
 export default function PromocoesPage() {
   const { contexto, loadingContexto } = useEmpresa();
 
+  // Sistema de Notificações Moderno (Toast)
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'info' });
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
+  };
+
   // Proteção de Rota (Feature Toggle)
   const [autorizado, setAutorizado] = useState<boolean | null>(null);
 
-  // Estados de Controle do Wizard e Modal
+  // Estados de Controle do Wizard e Tabs
+  const [modoTela, setModoTela] = useState<'NOVA' | 'RASCUNHOS'>('NOVA');
   const [passoAtual, setPassoAtual] = useState(1);
   const [modalValidadeAberto, setModalValidadeAberto] = useState(false);
   const [modalSucessoAberto, setModalSucessoAberto] = useState(false);
@@ -234,11 +242,16 @@ export default function PromocoesPage() {
   const [dataFimNova, setDataFimNova] = useState("");
   const [gravandoNovaValidade, setGravandoNovaValidade] = useState(false);
 
-  // Estados da Lista Geral de Produtos (Passo 1)
+  // Estados da Lista Geral de Produtos (Passo 1 - NOVA)
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [familiasDropdown, setFamiliasDropdown] = useState<{codigo: string, nome: string}[]>([]);
   const [tabelasSenior, setTabelasSenior] = useState<{codtpr: string, datini: string, datfim: string}[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Estados de Busca de Rascunhos (Passo 1 - RASCUNHOS)
+  const [tabelaBuscaRascunho, setTabelaBuscaRascunho] = useState("");
+  const [validadeBuscaRascunho, setValidadeBuscaRascunho] = useState("");
+  const [loadingRascunho, setLoadingRascunho] = useState(false);
   
   // Estados de Loading do Passo 3
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
@@ -270,34 +283,36 @@ export default function PromocoesPage() {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
   };
 
-  // Trava de segurança (Apenas Suporte)
+  // Trava de segurança
   useEffect(() => {
     const usuario = localStorage.getItem("usuario")?.toLowerCase() || "";
     if (usuario === "suporte" || usuario === "jair") setAutorizado(true);
     else setAutorizado(false);
   }, []);
 
-  // Carrega Famílias e Tabelas
-  useEffect(() => {
-    if (!autorizado) return;
-    async function carregarDadosIniciais() {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token || !contexto?.empresa?.id) return;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/senior/companies`, { headers: { "Authorization": `Bearer ${token}` } });
-        if (res.ok) {
-          const data = await res.json();
-          const empresaAtual = data.find((e: any) => e.codigo === contexto.empresa.id);
-          
-          // ATUALIZADO: Agora salva as famílias E as tabelas na memória
-          if (empresaAtual) {
-            if (empresaAtual.familias) setFamiliasDropdown(empresaAtual.familias);
-            if (empresaAtual.tabelasPreco) setTabelasSenior(empresaAtual.tabelasPreco);
-          }
+  // Função isolada para carregar e atualizar dados do Senior em tempo real
+  const carregarDadosIniciais = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token || !contexto?.empresa?.id) return;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/senior/companies`, { headers: { "Authorization": `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        const empresaAtual = data.find((e: any) => e.codigo === contexto.empresa.id);
+        
+        if (empresaAtual) {
+          if (empresaAtual.familias) setFamiliasDropdown(empresaAtual.familias);
+          if (empresaAtual.tabelasPreco) setTabelasSenior(empresaAtual.tabelasPreco);
         }
-      } catch (e) { console.error("Erro ao carregar dados iniciais", e); }
+      }
+    } catch (e) { console.error("Erro ao carregar dados iniciais", e); }
+  };
+
+  // Carrega Famílias e Tabelas no Mount
+  useEffect(() => {
+    if (autorizado) {
+      carregarDadosIniciais();
     }
-    carregarDadosIniciais();
   }, [contexto, autorizado]);
 
   // Busca Geral do Catálogo (Passo 1)
@@ -320,9 +335,76 @@ export default function PromocoesPage() {
       setTotalRegistros(data.totalRecords || 0);
       setPagina(novaPagina);
     } catch (error) {
-      console.error("Falha na requisição:", error);
+      showToast("Falha ao buscar produtos no ERP.", "error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Busca Rascunho via GET + Query Params (INCLUI A CORREÇÃO DO PREÇO)
+  async function carregarRascunhoSalvo(e: FormEvent) {
+    e.preventDefault();
+    if (!tabelaBuscaRascunho || !validadeBuscaRascunho || !contexto) return;
+
+    setLoadingRascunho(true);
+    const token = localStorage.getItem("token");
+
+    try {
+      const dataInicialSplit = (validadeBuscaRascunho.split("-")[0] || "").trim();
+
+      const params = new URLSearchParams({
+        company: String(contexto.empresa.id),
+        tablePrice: tabelaBuscaRascunho,
+        initialDate: dataInicialSplit,
+        page: "1",
+        recordsPerPage: "1000"
+      });
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/findPromotions?${params.toString()}`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro na API de Busca");
+      }
+
+      const data = await response.json();
+      const itensEncontrados = data.products || data;
+
+      if (!Array.isArray(itensEncontrados) || itensEncontrados.length === 0) {
+        showToast("Nenhum produto pendente para esta tabela e validade.", "info");
+        setLoadingRascunho(false);
+        return;
+      }
+
+      const novoMapa = new Map<string, Product>();
+      const novosRascunhos: Record<string, Product> = {};
+
+      itensEncontrados.forEach((p: Product) => {
+        novoMapa.set(p.code, p);
+        
+        // CORREÇÃO: Garante que o valor que veio salvo no banco popule a grid visual
+        novosRascunhos[p.code] = {
+          ...p,
+          basePricePromo: p.basePrice // O preço que ele digitou antes volta preenchido
+        };
+      });
+      
+      setProdutosSelecionados(novoMapa);
+      setRascunhosPromo(novosRascunhos);
+      
+      setTabelaSelecionada(tabelaBuscaRascunho);
+      setValidadeSelecionada(validadeBuscaRascunho);
+      setSelecionadosOficina(new Set());
+      setPassoAtual(3);
+      
+      showToast("Rascunho carregado com sucesso!", "success");
+
+    } catch (error) {
+      showToast("Falha ao carregar o rascunho. Tente novamente.", "error");
+    } finally {
+      setLoadingRascunho(false);
     }
   }
 
@@ -351,19 +433,17 @@ export default function PromocoesPage() {
   }
 
   useEffect(() => {
-    if (!autorizado || !contexto || loadingContexto) return;
+    if (!autorizado || !contexto || loadingContexto || modoTela === 'RASCUNHOS') return;
     const temporizadorDebounce = setTimeout(() => { buscarProdutos(1, busca, buscaFamilia); setPagina(1); }, 500); 
     return () => clearTimeout(temporizadorDebounce);
-  }, [busca, buscaFamilia, contexto, loadingContexto, autorizado]);
+  }, [busca, buscaFamilia, contexto, loadingContexto, autorizado, modoTela]);
 
   // ==========================================
   // MATEMÁTICA DA SIMULAÇÃO (MARKUP REAL-TIME)
-  // Espelhando a regra do Senior: InserirIntegracao()
   // ==========================================
   function calcularPrecoSimulado(p: Product) {
     let precoMedio = p.average || 0;
     
-    // 1. Apura o custo final da entrada considerando as deduções (PCC tem base reduzida pelo ICMS)
     const pctIcmEnt = p.inboundIcms || 0;
     const pctPccEnt = p.inboundCofinsAndPis || 0;
     const pctIpiEnt = p.inboundIpi || 0;
@@ -377,7 +457,6 @@ export default function PromocoesPage() {
 
     precoMedio = precoMedio - valorIcmsEnt - valorPccEnt + valorIpiEnt + valorFreEnt;
 
-    // 2. Calcula o Markup da Saída (Por dentro)
     const pctCusFix = p.fixedCoast || 0;
     const pctLucro = p.profit || 0;
     const pctIcmsVenda = p.icms || 0;
@@ -440,6 +519,7 @@ export default function PromocoesPage() {
     setIsBulkPromoOpen(false);
     setBulkPromoValue("");
     setSelecionadosOficina(new Set());
+    showToast(`${selecionadosOficina.size} itens atualizados com sucesso!`, "success");
   }
 
   // ==========================================
@@ -465,16 +545,19 @@ export default function PromocoesPage() {
         });
         
         if (!response.ok) throw new Error("Falha ao criar validade.");
+        
+        await carregarDadosIniciais();
+        
         setValidadeSelecionada(`${dataInicioNova} - ${dataFimNova}`);
+        showToast("Nova validade criada no Senior com sucesso!", "success");
       } catch (err) { 
-        alert("Erro ao criar nova validade no Senior.");
+        showToast("Erro ao criar nova validade no Senior.", "error");
         setGravandoNovaValidade(false);
         return; 
       }
       setGravandoNovaValidade(false);
     }
 
-    // Ao avançar, limpa possíveis rascunhos velhos para carregar fresco do passo 1
     setRascunhosPromo({});
     setSelecionadosOficina(new Set());
     setModalValidadeAberto(false);
@@ -483,20 +566,18 @@ export default function PromocoesPage() {
 
   const voltarParaSelecao = () => { setPassoAtual(1); setModalValidadeAberto(false); };
 
-  // Helper para montar o Payload Final comum às Rotas de Rascunho/Efetivar
-  // Helper para montar o Payload Final comum às Rotas de Rascunho/Efetivar
+  // Helper para montar o Payload Final
   function montarPayloadCampanha() {
-    const dataInicialSplit = (validadeSelecionada.split("-")[0] || "").trim();
+    const dataInicialSplit = (validadeSelecionada.split(" - ")[0] || "").trim();
     
     return {
-      company: String(contexto?.empresa.id || ""), // Garante que vá como String
+      company: String(contexto?.empresa.id || ""), 
       tablePrice: tabelaSelecionada,
       initialDate: dataInicialSplit,
       products: produtosNoCarrinhoOrdenados.map(p => {
         const r = rascunhosPromo[p.code] || p;
         const precoSimulado = r.basePricePromo !== undefined ? r.basePricePromo : calcularPrecoSimulado(r);
         
-        // Garante que TODOS os numéricos vão como Number (se nulo/vazio, envia 0)
         return {
           code: String(r.code),
           average: Number(r.average) || 0,
@@ -524,24 +605,17 @@ export default function PromocoesPage() {
     const token = localStorage.getItem("token");
     try {
       const payload = montarPayloadCampanha();
-      
-      console.log("=== PAYLOAD ENVIADO (SALVAR RASCUNHO) ===");
-      console.log(JSON.stringify(payload, null, 2));
-
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/promotion`, {
         method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify(payload)
       });
+      if (!response.ok) throw new Error("Erro na API");
       
-      if (!response.ok) {
-        const erroBackend = await response.json();
-        console.error("⛔ ERRO DO BACKEND:", erroBackend);
-        alert(`O servidor recusou os dados. Olhe o console (F12) para ver o motivo: ${JSON.stringify(erroBackend)}`);
-        throw new Error("Erro na API");
-      }
-      
-      alert("Rascunho de simulação guardado com sucesso na tabela USU_TSIMPRO.");
-    } catch (e) { console.error("Falha:", e); } 
-    finally { setSalvandoRascunho(false); }
+      showToast("Rascunho de simulação salvo com sucesso! Você pode retomar mais tarde.", "success");
+    } catch (e) { 
+      showToast("Erro ao salvar simulação.", "error"); 
+    } finally { 
+      setSalvandoRascunho(false); 
+    }
   }
 
   async function efetivarCampanhaSenior() {
@@ -550,40 +624,22 @@ export default function PromocoesPage() {
     try {
       const payload = montarPayloadCampanha();
       
-      // PASSO 1 OBRIGATÓRIO (Exigência do ERP): Salva na tabela de simulação silenciosamente
-      console.log("=== 1. GRAVANDO BASE DE SIMULAÇÃO (RASCUNHO) ===");
       const responseSimulacao = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/promotion`, {
         method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify(payload)
       });
-      
-      if (!responseSimulacao.ok) {
-        const erroBackend = await responseSimulacao.json();
-        console.error("⛔ ERRO NA SIMULAÇÃO:", erroBackend);
-        alert(`O ERP recusou a criação da base: ${JSON.stringify(erroBackend)}`);
-        throw new Error("Erro na API de Simulação");
-      }
+      if (!responseSimulacao.ok) throw new Error("Erro na API de Simulação");
 
-      // PASSO 2: Agora sim, com a simulação criada, nós Efetivamos de fato
-      console.log("=== 2. EFETIVANDO CAMPANHA OFICIAL ===");
       const responseEfetivar = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/assignment`, {
         method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }, body: JSON.stringify(payload)
       });
+      if (!responseEfetivar.ok) throw new Error("Erro na API de Efetivação");
       
-      if (!responseEfetivar.ok) {
-        const erroBackend = await responseEfetivar.json();
-        console.error("⛔ ERRO NA EFETIVAÇÃO:", erroBackend);
-        alert(`O servidor recusou a efetivação. Motivo: ${JSON.stringify(erroBackend)}`);
-        throw new Error("Erro na API de Efetivação");
-      }
-      
-      // Sucesso total nas duas etapas! Mostra o modal.
       setModalSucessoAberto(true);
       setProdutosSelecionados(new Map());
       setRascunhosPromo({});
       setSelecionadosOficina(new Set());
-      
     } catch (e) { 
-      console.error("Falha no fluxo de efetivação:", e); 
+      showToast("O servidor recusou a efetivação. O rascunho deve ser salvo antes.", "error");
     } finally { 
       setEfetivandoPromocao(false); 
     }
@@ -592,6 +648,7 @@ export default function PromocoesPage() {
   function fecharSucesso() {
     setModalSucessoAberto(false);
     setPassoAtual(1);
+    setModoTela("NOVA");
   }
 
   function handleSort(key: keyof Product) {
@@ -615,13 +672,11 @@ export default function PromocoesPage() {
   const todosDaOficinaSelecionados = produtosNoCarrinhoOrdenados.length > 0 && produtosNoCarrinhoOrdenados.every(p => selecionadosOficina.has(p.code));
   const quantidadeCarrinho = produtosSelecionados.size;
 
-  // --- LÓGICA DO MODAL DE TABELAS ---
-  // Extrai apenas os códigos de tabela únicos para o primeiro select
+  // --- LÓGICA DE TABELAS DINÂMICAS ---
   const tabelasUnicas = Array.from(new Set(tabelasSenior.map(t => t.codtpr)));
-  // Filtra as validades disponíveis apenas para a tabela selecionada
-  const validadesDisponiveis = tabelasSenior.filter(t => t.codtpr === tabelaSelecionada);
+  const validadesDisponiveisSetup = tabelasSenior.filter(t => t.codtpr === tabelaSelecionada);
+  const validadesDisponiveisBusca = tabelasSenior.filter(t => t.codtpr === tabelaBuscaRascunho);
 
-  // Garante que a data do Senior fique no formato BR (DD/MM/AAAA)
   const formatarDataErp = (dataStr: string) => {
     if (!dataStr) return "";
     if (dataStr.includes("/")) return dataStr.split("T")[0];
@@ -630,7 +685,6 @@ export default function PromocoesPage() {
     return dataStr;
   };
 
-  // Renderização de Bloqueio (Feature Toggle)
   if (autorizado === false) {
     return (
       <div className="flex min-h-screen bg-fritz-stone-50 w-full items-center justify-center">
@@ -652,6 +706,34 @@ export default function PromocoesPage() {
 
   return (
     <div className="flex min-h-screen bg-fritz-stone-50 w-full relative">
+      
+      {/* RENDERIZAÇÃO DO COMPONENTE TOAST MODERNIZADO */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-right-8 fade-in duration-300">
+          <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl shadow-xl border ${
+            toast.type === 'success' ? 'bg-white border-green-200' : 
+            toast.type === 'error' ? 'bg-white border-red-200' : 
+            'bg-white border-fritz-stone-200'
+          }`}>
+             <div className={`flex items-center justify-center h-10 w-10 rounded-full ${
+               toast.type === 'success' ? 'bg-green-100 text-green-600' : 
+               toast.type === 'error' ? 'bg-red-100 text-red-600' : 
+               'bg-fritz-stone-100 text-fritz-stone-600'
+             }`}>
+                {toast.type === 'success' && <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                {toast.type === 'error' && <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>}
+                {toast.type === 'info' && <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>}
+             </div>
+             <div>
+               <p className={`text-sm font-bold ${toast.type === 'error' ? 'text-red-800' : 'text-fritz-stone-900'}`}>{toast.message}</p>
+             </div>
+             <button onClick={() => setToast(prev => ({ ...prev, show: false }))} className="ml-2 text-fritz-stone-400 hover:text-fritz-stone-700 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+             </button>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 flex flex-col w-full min-w-0 p-8">
         
         <div className="mb-2">
@@ -662,13 +744,33 @@ export default function PromocoesPage() {
           />
         </div>
 
+        {passoAtual === 1 && (
+          <div className="flex gap-2 border-b border-fritz-stone-200 mb-6 mt-4">
+            <button 
+              onClick={() => { setModoTela('NOVA'); setProdutosSelecionados(new Map()); }} 
+              className={`px-6 py-3 font-bold text-sm transition-all duration-200 relative ${modoTela === 'NOVA' ? 'text-fritz-bright-700' : 'text-fritz-stone-500 hover:text-fritz-stone-700 hover:bg-fritz-stone-100/50 rounded-t-lg'}`}
+            >
+              Criar Nova Campanha
+              {modoTela === 'NOVA' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-fritz-bright-700 rounded-t"></div>}
+            </button>
+            <button 
+              onClick={() => { setModoTela('RASCUNHOS'); setProdutosSelecionados(new Map()); }} 
+              className={`px-6 py-3 font-bold text-sm transition-all duration-200 relative flex items-center gap-2 ${modoTela === 'RASCUNHOS' ? 'text-fritz-bright-700' : 'text-fritz-stone-500 hover:text-fritz-stone-700 hover:bg-fritz-stone-100/50 rounded-t-lg'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              Meus Rascunhos Salvos
+              {modoTela === 'RASCUNHOS' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-fritz-bright-700 rounded-t"></div>}
+            </button>
+          </div>
+        )}
+
         <StepperVisual passoAtual={passoAtual} />
 
         {/* ========================================================= */}
-        {/* PASSO 1: GRID DE SELEÇÃO DE PRODUTOS ("CARRINHO")        */}
+        {/* PASSO 1: A) CRIAR NOVA CAMPANHA                           */}
         {/* ========================================================= */}
-        {passoAtual === 1 && (
-          <div className="flex flex-col flex-1 animate-in fade-in zoom-in-95 duration-300">
+        {passoAtual === 1 && modoTela === 'NOVA' && (
+          <div className="flex flex-col flex-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-fritz-stone-200">
               <form onSubmit={(e) => { e.preventDefault(); buscarProdutos(1, busca, buscaFamilia); }} className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 <div className="relative md:col-span-3 z-30">
@@ -696,7 +798,7 @@ export default function PromocoesPage() {
             </div>
 
             <div className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden flex-1 flex flex-col">
-              <div ref={scrollInternoRef} className="overflow-auto max-h-[calc(100vh-400px)] relative">
+              <div ref={scrollInternoRef} className="overflow-auto max-h-[calc(100vh-450px)] relative">
                 <table className="w-full text-left text-sm text-fritz-stone-700 table-fixed min-w-max">
                   <thead className="bg-fritz-stone-100/50 text-xs font-semibold uppercase tracking-wider text-fritz-stone-500">
                     <tr>
@@ -752,7 +854,7 @@ export default function PromocoesPage() {
                 </table>
               </div>
 
-              <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-4">
+              <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-4 mt-auto">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1">
                     <button onClick={() => mudarPagina(pagina - 1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50">
@@ -780,6 +882,74 @@ export default function PromocoesPage() {
         )}
 
         {/* ========================================================= */}
+        {/* PASSO 1: B) RESGATAR RASCUNHOS                            */}
+        {/* ========================================================= */}
+        {passoAtual === 1 && modoTela === 'RASCUNHOS' && (
+          <div className="flex flex-col items-center justify-center flex-1 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="bg-white rounded-3xl shadow-sm border border-fritz-stone-200 w-full max-w-xl overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-2 bg-fritz-bright-700"></div>
+              <div className="p-10 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-fritz-stone-100 text-fritz-stone-600 mb-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                </div>
+                <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Recuperar Rascunho do Senior</h3>
+                <p className="text-sm text-fritz-stone-500 mb-8">Selecione a Tabela e a Validade para retomar os cálculos e edições de onde você parou.</p>
+                
+                <form onSubmit={carregarRascunhoSalvo} className="space-y-5 text-left">
+                  <div>
+                    <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Tabela de Destino</label>
+                    <select 
+                      required 
+                      value={tabelaBuscaRascunho} 
+                      onChange={(e) => { setTabelaBuscaRascunho(e.target.value); setValidadeBuscaRascunho(""); }} 
+                      className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
+                    >
+                      <option value="">Selecione uma tabela...</option>
+                      {tabelasUnicas.map(cod => (
+                        <option key={cod} value={cod}>Tabela {cod}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Validade da Campanha</label>
+                    <select 
+                      required 
+                      value={validadeBuscaRascunho} 
+                      onChange={(e) => setValidadeBuscaRascunho(e.target.value)} 
+                      disabled={!tabelaBuscaRascunho}
+                      className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Selecione o período do rascunho...</option>
+                      {validadesDisponiveisBusca.map((val, idx) => {
+                         const dtIni = formatarDataErp(val.datini);
+                         const dtFim = formatarDataErp(val.datfim);
+                         return (
+                           <option key={idx} value={`${dtIni} - ${dtFim}`}>{dtIni} a {dtFim}</option>
+                         );
+                      })}
+                    </select>
+                  </div>
+
+                  <div className="pt-6">
+                    <Button type="submit" disabled={loadingRascunho} className="w-full bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-4 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition-transform active:scale-[0.98]">
+                      {loadingRascunho ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                          Buscando no ERP...
+                        </>
+                      ) : (
+                        "Carregar Rascunho Completo"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
         {/* PASSO 2: MODAL DE CONFIGURAÇÃO (TABELA E VALIDADE)        */}
         {/* ========================================================= */}
         {modalValidadeAberto && (
@@ -798,7 +968,6 @@ export default function PromocoesPage() {
                     <select 
                       required 
                       value={tabelaSelecionada} 
-                      // Ao trocar a tabela, limpamos a validade anterior para não dar erro
                       onChange={(e) => { setTabelaSelecionada(e.target.value); setValidadeSelecionada(""); }} 
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
                     >
@@ -815,11 +984,11 @@ export default function PromocoesPage() {
                       required 
                       value={validadeSelecionada} 
                       onChange={(e) => setValidadeSelecionada(e.target.value)} 
-                      disabled={!tabelaSelecionada} // Fica bloqueado até escolher a tabela
+                      disabled={!tabelaSelecionada}
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="">Selecione um período...</option>
-                      {validadesDisponiveis.map((val, idx) => {
+                      {validadesDisponiveisSetup.map((val, idx) => {
                          const dtIni = formatarDataErp(val.datini);
                          const dtFim = formatarDataErp(val.datfim);
                          return (
@@ -924,7 +1093,7 @@ export default function PromocoesPage() {
                 <p className="text-sm text-fritz-stone-500 mt-1">Campanha vinculada à tabela <strong className="text-fritz-bright-700 font-bold">{tabelaSelecionada}</strong> ({validadeSelecionada})</p>
               </div>
               <Button onClick={voltarParaSelecao} className="text-sm font-semibold text-fritz-stone-500 hover:text-fritz-stone-900 underline bg-transparent shadow-none border-none p-0 h-auto">
-                ← Adicionar/remover produtos
+                ← Voltar para listagem
               </Button>
             </div>
 
@@ -973,7 +1142,6 @@ export default function PromocoesPage() {
                       const rascunho = rascunhosPromo[produtoBase.code] || { ...produtoBase };
                       const isSelecionadoOficina = selecionadosOficina.has(rascunho.code);
                       
-                      // Executa a conta de markup real-time espelhando a base (PCC Deduzido)
                       const precoSimuladoRealtime = calcularPrecoSimulado(rascunho);
                       const precoFinalPromo = rascunho.basePricePromo !== undefined ? rascunho.basePricePromo : precoSimuladoRealtime;
 
@@ -1029,10 +1197,10 @@ export default function PromocoesPage() {
             </div>
 
             <div className="flex justify-end pt-4 border-t border-fritz-stone-100 gap-4">
-              <Button onClick={salvarRascunhoSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-white border-2 border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+              <Button onClick={salvarRascunhoSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-white border-2 border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]">
                 {salvandoRascunho ? "Guardando..." : "Salvar Rascunho"}
               </Button>
-              <Button onClick={efetivarCampanhaSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md">
+              <Button onClick={efetivarCampanhaSenior} disabled={salvandoRascunho || efetivandoPromocao} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md transition-transform active:scale-[0.98]">
                 {efetivandoPromocao ? (
                   <>
                     <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -1047,20 +1215,25 @@ export default function PromocoesPage() {
         )}
 
         {/* ========================================================= */}
-        {/* MODAL DE SUCESSO (FINALIZAÇÃO)                            */}
+        {/* MODAL DE SUCESSO PREMIUM (FINALIZAÇÃO)                    */}
         {/* ========================================================= */}
         {modalSucessoAberto && (
           <div className="fixed inset-0 bg-fritz-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-[420px] overflow-hidden animate-in zoom-in-95 duration-300 text-center p-8">
-              <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-green-100 text-green-600 mb-6 shadow-inner border-4 border-white ring-4 ring-green-50">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <div className="bg-white rounded-[2rem] shadow-2xl w-[460px] overflow-hidden animate-in zoom-in-95 duration-300 text-center p-10 relative">
+              
+              <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-green-400 to-green-600"></div>
+
+              <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-green-50 to-green-100 text-green-600 mb-6 shadow-inner border-[6px] border-white ring-[1px] ring-green-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-sm"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
-              <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Promoção Integrada!</h3>
-              <p className="text-sm text-fritz-stone-500 mb-8 px-4">Os preços simulados foram enviados ao Senior Sistemas para a tabela <strong className="text-fritz-stone-700">{tabelaSelecionada}</strong> com sucesso.</p>
+              <h3 className="text-3xl font-black text-fritz-stone-900 mb-3 tracking-tight">Promoção Oficializada!</h3>
+              <p className="text-base text-fritz-stone-500 mb-10 px-4 leading-relaxed">
+                Os preços e impostos foram consolidados no Senior Sistemas na tabela <strong className="text-fritz-stone-800 font-bold px-1 py-0.5 bg-fritz-stone-100 rounded">{tabelaSelecionada}</strong> com sucesso absoluto.
+              </p>
               
               <div className="flex w-full justify-center">
-                <Button onClick={fecharSucesso} className="w-full bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white py-4 rounded-xl font-bold text-base shadow-md">
-                  Criar Nova Campanha
+                <Button onClick={fecharSucesso} className="w-full bg-fritz-stone-900 hover:bg-fritz-stone-800 text-white py-4 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl transition-all">
+                  Iniciar Nova Campanha
                 </Button>
               </div>
             </div>
