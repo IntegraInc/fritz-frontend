@@ -5,9 +5,6 @@ import { Button } from "@/components/tailgrids/core/button";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { PageHeader } from "@/components/PageHeader";
 
-import { driver } from "driver.js";
-import "driver.js/dist/driver.css";
-
 type Product = {
   code: string;
   description: string;
@@ -28,6 +25,7 @@ type Product = {
   inboundFreight?: number;
   fixedCoast?: number;
   basePrice?: number;
+  inboundInvoicePrice?: number;
   lastInboundPrice?: number;
   lastInboundDate?: string;
   lastUpdateDate?: string;
@@ -176,8 +174,10 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
 
   return (
     <div 
+      tabIndex={0}
+      onFocus={() => setEditando(true)}
       onClick={() => setEditando(true)} 
-      className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white rounded px-2 py-1 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
+      className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white focus:bg-white focus:ring-2 focus:ring-fritz-bright-600 focus:outline-none rounded px-2 py-1 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
     >
       {exibicao}
     </div>
@@ -260,6 +260,12 @@ const ComboboxFamilia = ({ familias = [], valorSelecionado, onChange }: { famili
 export default function ProdutosPage() {
   const { contexto, loadingContexto } = useEmpresa();
 
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'info' });
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
+  };
+
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [familiasDropdown, setFamiliasDropdown] = useState<{codigo: string, nome: string}[]>([]);
   const [loading, setLoading] = useState(false);
@@ -300,7 +306,10 @@ export default function ProdutosPage() {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
-          const data = await res.json();
+          const text = await res.text();
+          const data = text ? JSON.parse(text) : null;
+          if (!data) return;
+
           const empresaAtual = data.find((e: any) => e.codigo === contexto.empresa.id);
           if (empresaAtual && empresaAtual.familias) {
             setFamiliasDropdown(empresaAtual.familias);
@@ -338,6 +347,7 @@ export default function ProdutosPage() {
       setPagina(novaPagina);
     } catch (error) {
       console.error("Falha na requisição:", error);
+      showToast("Falha ao buscar produtos no ERP.", "error");
     } finally {
       setLoading(false);
     }
@@ -351,7 +361,6 @@ export default function ProdutosPage() {
     }
   }
 
-  // ATALHO DE COPIAR CÓDIGO
   function copiarCodigo(codigo: string, e: React.MouseEvent) {
     e.stopPropagation(); 
     navigator.clipboard.writeText(codigo);
@@ -384,7 +393,8 @@ export default function ProdutosPage() {
           inboundIpi: r.inboundIpi,
           inboundFreight: r.inboundFreight,
           fixedCoast: r.fixedCoast,
-          basePrice: r.basePrice
+          basePrice: r.basePrice,
+          inboundInvoicePrice: r.inboundInvoicePrice
         }))
       };
 
@@ -399,9 +409,10 @@ export default function ProdutosPage() {
       setRascunhos({});
       setSelecionados(new Set());
       buscarProdutos(pagina, busca, buscaFamilia);
+      showToast("Alterações salvas com sucesso no Senior!", "success");
       
     } catch (error) {
-      alert("Ocorreu um erro ao salvar as alterações. Verifique a conexão.");
+      showToast("Ocorreu um erro ao salvar as alterações. Verifique a conexão.", "error");
       console.error(error);
     } finally {
       setSalvando(false);
@@ -480,73 +491,6 @@ export default function ProdutosPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []); 
 
-  const tourInstanceRef = useRef<any>(null);
-
-  function dispararTour() {
-    tourInstanceRef.current = driver({
-      showProgress: true,
-      animate: true,
-      nextBtnText: 'Avançar',
-      prevBtnText: 'Voltar',
-      doneBtnText: 'Concluir',
-      steps: [
-        { 
-          popover: { title: 'Bem-vindo ao Hub de Produtos', description: 'Preparamos este guia rápido para te mostrar todo o poder da nova interface de precificação.' } 
-        },
-        { 
-          element: '#tour-caixa-busca', 
-          popover: { title: 'Busca Avançada', description: 'O filtro de Famílias agora possui uma busca interna rápida. Digite o nome ou código e a tabela cruzará com a pesquisa de texto livre ao lado.' } 
-        },
-        { 
-          element: '#tour-ordenacao',
-          popover: { title: 'Tabela Dinâmica', description: 'Clique nos títulos para ordenar de A-Z ou arraste as bordas verticais para redimensionar as colunas como no Excel.' } 
-        },
-        { 
-          element: '#tour-copia',
-          popover: { title: 'Cópia Rápida', description: 'Precisa do código do produto? É só passar o mouse em cima dele e clicar para copiá-lo direto para sua área de transferência.' } 
-        },
-        { 
-          element: '#tour-edicao',
-          popover: { title: 'Edição Invisível', description: 'A grande novidade: Dê um clique em qualquer número ou texto da grid para transformá-lo em um campo editável na hora!' } 
-        },
-        { 
-          element: '#tour-checkbox-lote',
-          popover: { title: 'Ações em Lote', description: 'Selecione produtos usando as caixas à esquerda. Uma barra preta surgirá no topo para você aplicar o mesmo valor em todos de uma vez.' } 
-        },
-        { 
-          element: '#tour-paginacao', 
-          popover: { title: 'Navegação sem Perdas', description: 'Sempre que você altera algo, vira um rascunho (amarelo). Você pode navegar pelas páginas livremente; o sistema guardará tudo até você clicar em Salvar no ERP.' } 
-        }
-      ],
-      onDestroyStarted: () => {
-        localStorage.setItem("fritz_tour_produtos_v8", "true");
-        if (tourInstanceRef.current) {
-          tourInstanceRef.current.destroy();
-        }
-      }
-    });
-    
-    tourInstanceRef.current.drive();
-  }
-
-  useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
-    
-    if (!token || loading || loadingContexto || produtos.length === 0) return;
-    
-    const tourConcluido = localStorage.getItem("fritz_tour_produtos_v8");
-    if (tourConcluido) return;
-    
-    const timeout = setTimeout(() => { dispararTour(); }, 500);
-
-    return () => {
-      clearTimeout(timeout);
-      if (tourInstanceRef.current) {
-        tourInstanceRef.current.destroy();
-      }
-    };
-  }, [loading, loadingContexto, produtos]);
-
   function handleSort(key: keyof Product) {
     let direction: "asc" | "desc" = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
@@ -572,6 +516,33 @@ export default function ProdutosPage() {
 
   return (
     <div className="flex min-h-screen bg-fritz-stone-50 w-full relative">
+      
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-right-8 fade-in duration-300">
+          <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl shadow-xl border ${
+            toast.type === 'success' ? 'bg-white border-green-200' : 
+            toast.type === 'error' ? 'bg-white border-red-200' : 
+            'bg-white border-fritz-stone-200'
+          }`}>
+             <div className={`flex items-center justify-center h-10 w-10 rounded-full ${
+               toast.type === 'success' ? 'bg-green-100 text-green-600' : 
+               toast.type === 'error' ? 'bg-red-100 text-red-600' : 
+               'bg-fritz-stone-100 text-fritz-stone-600'
+             }`}>
+                {toast.type === 'success' && <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                {toast.type === 'error' && <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>}
+                {toast.type === 'info' && <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>}
+             </div>
+             <div>
+               <p className={`text-sm font-bold ${toast.type === 'error' ? 'text-red-800' : 'text-fritz-stone-900'}`}>{toast.message}</p>
+             </div>
+             <button onClick={() => setToast(prev => ({ ...prev, show: false }))} className="ml-2 text-fritz-stone-400 hover:text-fritz-stone-700 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+             </button>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 flex flex-col w-full min-w-0 relative">
         
         {selecionados.size > 0 && (
@@ -608,8 +579,7 @@ export default function ProdutosPage() {
                       onChange={(e) => setBulkField(e.target.value as keyof Product)}
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
                     >
-                      <option value="average">Custo Priorize (R$)</option>
-                      {/* Removido o Preço Base daqui */}
+                      <option value="average">Custo Migrado (R$)</option>
                       <option value="fixedCoast">Custo Fixo (%)</option>
                       <option value="inboundIcms">ICMS - Entrada (%)</option>
                       <option value="inboundCofinsAndPis">PIS/COFINS - Entrada (%)</option>
@@ -650,7 +620,7 @@ export default function ProdutosPage() {
         <div className="p-8 flex-1 w-full">
           <div className="mx-auto w-full">
             
-            <div id="tour-badge-erp" className="mb-8">
+            <div className="mb-8">
               <PageHeader 
                 title="Consulta e Precificação de Produtos" 
                 description="Gerencie custos, comissões e impostos do catálogo com atualização em tempo real."
@@ -658,7 +628,7 @@ export default function ProdutosPage() {
               />
             </div>
 
-            <div id="tour-caixa-busca" className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-fritz-stone-200">
+            <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-fritz-stone-200">
               <form onSubmit={(e) => { e.preventDefault(); buscarProdutos(1, busca, buscaFamilia); }} className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 
                 <div className="relative md:col-span-3 z-30">
@@ -703,10 +673,10 @@ export default function ProdutosPage() {
               </form>
             </div>
 
-            <div id="tour-tabela-produtos" ref={secaoTabelaRef} className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden scroll-mt-6 z-10">
+            <div ref={secaoTabelaRef} className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden scroll-mt-6 z-10">
               <div ref={scrollInternoRef} className="overflow-auto max-h-[calc(100vh-320px)] relative">
                 <table className="w-full text-left text-sm text-fritz-stone-700 table-fixed min-w-max">
-                  <thead id="tour-cabecalho-tabela" className="bg-fritz-stone-100/50 text-xs font-semibold uppercase tracking-wider text-fritz-stone-500">
+                  <thead className="bg-fritz-stone-100/50 text-xs font-semibold uppercase tracking-wider text-fritz-stone-500">
                     <tr>
                       <ThOrdenavel label="Check" larguraInicial="60px" align="center">
                         <div className="flex items-center justify-center w-full">
@@ -719,12 +689,13 @@ export default function ProdutosPage() {
                         </div>
                       </ThOrdenavel>
                       <ThOrdenavel label="Família" sortKey="familyDescription" larguraInicial="200px" sortConfig={sortConfig} onSort={handleSort} />
-                      <ThOrdenavel id="tour-ordenacao" label="Código" sortKey="code" larguraInicial="140px" sortConfig={sortConfig} onSort={handleSort} />
+                      <ThOrdenavel label="Código" sortKey="code" larguraInicial="140px" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Descrição" sortKey="description" larguraInicial="350px" sortConfig={sortConfig} onSort={handleSort} />
                       
                       <ThOrdenavel label="Data Últ. Entrada" sortKey="lastInboundDate" larguraInicial="140px" align="center" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Última Entrada" sortKey="lastInboundPrice" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
-                      <ThOrdenavel label="Custo Priorize" sortKey="average" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
+                      <ThOrdenavel label="Preço Estoque" sortKey="inboundInvoicePrice" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
+                      <ThOrdenavel label="Custo migrado" sortKey="average" larguraInicial="140px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Preço Venda" sortKey="basePrice" larguraInicial="160px" align="right" sortConfig={sortConfig} onSort={handleSort} />
                       
                       <ThOrdenavel label="ICMS-(E)" sortKey="inboundIcms" larguraInicial="110px" align="right" sortConfig={sortConfig} onSort={handleSort} />
@@ -746,7 +717,7 @@ export default function ProdutosPage() {
                       <ThOrdenavel label="Última Alteração" sortKey="lastUpdateDate" larguraInicial="220px" align="left" sortConfig={sortConfig} onSort={handleSort} />
                     </tr>
                   </thead>
-                  <tbody id="tour-corpo-tabela" className="divide-y divide-fritz-stone-100 bg-white relative z-0">
+                  <tbody className="divide-y divide-fritz-stone-100 bg-white relative z-0">
                     
                     {loadingContexto || (loading && produtos.length === 0) ? (
                       Array.from({ length: 10 }).map((_, index) => (
@@ -756,6 +727,7 @@ export default function ProdutosPage() {
                           <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse"></div></td>
                           <td className="px-4 py-4"><div className={`h-4 rounded bg-gray-200 animate-pulse ${index % 2 === 0 ? 'w-64' : 'w-48'}`}></div></td>
                           <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse mx-auto"></div></td>
+                          <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse ml-auto"></div></td>
                           <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse ml-auto"></div></td>
                           <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse ml-auto"></div></td>
                           <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse ml-auto"></div></td>
@@ -777,7 +749,7 @@ export default function ProdutosPage() {
                       ))
                     ) : produtosOrdenados.length === 0 ? (
                       <tr>
-                        <td colSpan={22} className="px-6 py-20 text-center">
+                        <td colSpan={23} className="px-6 py-20 text-center">
                           <div className="mx-auto flex max-w-sm flex-col items-center">
                             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-fritz-stone-50 text-fritz-stone-400">
                               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -787,7 +759,7 @@ export default function ProdutosPage() {
                         </td>
                       </tr>
                     ) : (
-                      produtosOrdenados.map((produtoBase, index) => {
+                      produtosOrdenados.map((produtoBase) => {
                         const isEditado = !!rascunhos[produtoBase.code];
                         const produto = isEditado ? rascunhos[produtoBase.code] : produtoBase;
                         const isSelecionado = selecionados.has(produto.code);
@@ -797,7 +769,7 @@ export default function ProdutosPage() {
                             key={produto.code} 
                             className={`transition-colors ${isEditado ? "bg-amber-50/50" : isSelecionado ? "bg-fritz-bright-50" : "hover:bg-fritz-stone-50"}`}
                           >
-                            <td id={index === 0 ? "tour-checkbox-lote" : undefined} className="px-4 py-4 text-center align-middle">
+                            <td className="px-4 py-4 text-center align-middle">
                               <input 
                                 type="checkbox" 
                                 checked={isSelecionado}
@@ -817,7 +789,6 @@ export default function ProdutosPage() {
                             
                             <td className="px-4 py-4 truncate align-middle">
                               <button
-                                id={index === 0 ? "tour-copia" : undefined}
                                 onClick={(e) => copiarCodigo(produto.code, e)}
                                 className="group flex w-full items-center gap-2 text-fritz-stone-700 hover:text-fritz-bright-700 transition-colors focus:outline-none"
                                 title="Clique para copiar"
@@ -831,7 +802,7 @@ export default function ProdutosPage() {
                               </button>
                             </td>
                             
-                            <td id={index === 0 ? "tour-edicao" : undefined} className="px-4 py-4 align-middle">
+                            <td className="px-4 py-4 align-middle">
                               <CelulaInteligente tipo="text" valor={produto.description} onChange={(val: string) => handleEdit(produtoBase, "description", val)} />
                             </td>
 
@@ -841,11 +812,13 @@ export default function ProdutosPage() {
                             <td className="px-4 py-4 align-middle font-medium text-fritz-stone-600 text-right select-none">
                               {formatarMoeda(produto.lastInboundPrice)}
                             </td>
+                            <td className="px-4 py-4 align-middle font-medium text-fritz-stone-600 text-right select-none">
+                              {formatarMoeda(produto.inboundInvoicePrice)}
+                            </td>
                             <td className="px-4 py-4 align-middle font-medium text-fritz-bright-700">
                               <CelulaInteligente tipo="moeda" align="right" valor={produto.average} onChange={(val: number) => handleEdit(produtoBase, "average", val)} />
                             </td>
                             
-                            {/* AQUI ESTÁ A MUDANÇA: Preço Base Venda agora é apenas texto formatado, sem CelulaInteligente */}
                             <td className="px-4 py-4 align-middle font-bold text-fritz-green-700 text-right select-none">
                               {formatarMoeda(produto.basePrice)}
                             </td>
@@ -887,7 +860,7 @@ export default function ProdutosPage() {
               </div>
 
               {produtos.length > 0 && (
-                <div id="tour-paginacao" className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-4">
+                <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-4">
                   <div className="text-sm text-fritz-stone-500 flex items-center gap-3">
                     <span>Mostrando <span className="font-semibold text-fritz-stone-900">{produtos.length}</span> de <span className="font-semibold text-fritz-stone-900">{totalRegistros}</span> resultados</span>
                   </div>
@@ -944,30 +917,6 @@ export default function ProdutosPage() {
           </div>
         )}
       </main>
-
-      <button
-        onClick={dispararTour}
-        className="fixed top-8 right-8 z-40 group flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md border border-fritz-stone-200 p-3 text-fritz-stone-500 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 hover:bg-white hover:text-fritz-bright-700 hover:border-fritz-bright-200 hover:shadow-[0_8px_30px_rgb(81,131,27,0.2)] hover:scale-105 focus:outline-none"
-        title="Dicas de uso da tela"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-semibold transition-all duration-300 group-hover:max-w-[150px] group-hover:ml-2 group-hover:mr-1">
-          Dicas da Tela
-        </span>
-      </button>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .driver-popover { border-radius: 1rem !important; padding: 1.5rem !important; border: 1px solid #e5e7eb !important; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important; font-family: inherit !important; }
-        .driver-popover-title { font-size: 1.125rem !important; font-weight: 700 !important; color: #1c1917 !important; margin-bottom: 0.5rem !important; }
-        .driver-popover-description { font-size: 0.875rem !important; color: #57534e !important; line-height: 1.5 !important; }
-        .driver-popover-footer { margin-top: 1.25rem !important; }
-        .driver-popover-footer button { border-radius: 0.5rem !important; font-weight: 600 !important; font-size: 0.875rem !important; padding: 0.5rem 1rem !important; text-shadow: none !important; transition: all 0.2s !important; }
-        .driver-popover-next-btn { background-color: #51831b !important; color: #ffffff !important; border: none !important; }
-        .driver-popover-next-btn:hover { background-color: #3f6814 !important; }
-        .driver-popover-prev-btn { background-color: #f5f5f4 !important; color: #44403c !important; border: 1px solid #e7e5e4 !important; }
-        .driver-popover-prev-btn:hover { background-color: #e7e5e4 !important; }
-        .driver-popover-progress-text { font-size: 0.75rem !important; color: #a8a29e !important; font-weight: 600 !important; }
-      `}} />
     </div>
   );
 }

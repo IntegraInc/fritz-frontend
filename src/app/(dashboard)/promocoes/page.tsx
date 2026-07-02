@@ -28,6 +28,7 @@ type Product = {
   inboundFreight?: number;
   fixedCoast?: number;
   basePrice?: number;
+  inboundInvoicePrice?: number;
   lastInboundPrice?: number;
   lastInboundDate?: string;
   lastUpdateDate?: string;
@@ -52,6 +53,11 @@ type ThOrdenavelProps = {
   children?: React.ReactNode;
 };
 
+type DraftParameter = {
+  tablePrice: string;
+  dueDates: { initialDate: string; finalDate: string }[];
+};
+
 // ==========================================
 // FUNÇÕES ÚTEIS
 // ==========================================
@@ -67,13 +73,13 @@ const mascaraData = (valor: string) => {
 // COMPONENTES AUXILIARES
 // ==========================================
 const StepperVisual = ({ passoAtual }: { passoAtual: number }) => (
-  <div className="flex items-center justify-center mb-5 mt-1">
+  <div className="flex items-center justify-center">
     <div className="flex items-center">
-      <div className={`flex items-center justify-center w-8 h-8 text-sm rounded-full font-bold shadow-sm transition-colors duration-300 ${passoAtual >= 1 ? 'bg-fritz-bright-700 text-white ring-4 ring-fritz-bright-100' : 'bg-white border-2 border-fritz-stone-200 text-fritz-stone-400'}`}>1</div>
-      <div className={`h-1 w-16 transition-colors duration-300 ${passoAtual >= 2 ? 'bg-fritz-bright-700' : 'bg-fritz-stone-200'}`}></div>
-      <div className={`flex items-center justify-center w-8 h-8 text-sm rounded-full font-bold shadow-sm transition-colors duration-300 ${passoAtual >= 2 ? 'bg-fritz-bright-700 text-white ring-4 ring-fritz-bright-100' : 'bg-white border-2 border-fritz-stone-200 text-fritz-stone-400'}`}>2</div>
-      <div className={`h-1 w-16 transition-colors duration-300 ${passoAtual >= 3 ? 'bg-fritz-bright-700' : 'bg-fritz-stone-200'}`}></div>
-      <div className={`flex items-center justify-center w-8 h-8 text-sm rounded-full font-bold shadow-sm transition-colors duration-300 ${passoAtual >= 3 ? 'bg-fritz-bright-700 text-white ring-4 ring-fritz-bright-100' : 'bg-white border-2 border-fritz-stone-200 text-fritz-stone-400'}`}>3</div>
+      <div className={`flex items-center justify-center w-7 h-7 text-xs rounded-full font-bold shadow-sm transition-colors duration-300 ${passoAtual >= 1 ? 'bg-fritz-bright-700 text-white ring-4 ring-fritz-bright-100' : 'bg-white border-2 border-fritz-stone-200 text-fritz-stone-400'}`}>1</div>
+      <div className={`h-1 w-12 transition-colors duration-300 ${passoAtual >= 2 ? 'bg-fritz-bright-700' : 'bg-fritz-stone-200'}`}></div>
+      <div className={`flex items-center justify-center w-7 h-7 text-xs rounded-full font-bold shadow-sm transition-colors duration-300 ${passoAtual >= 2 ? 'bg-fritz-bright-700 text-white ring-4 ring-fritz-bright-100' : 'bg-white border-2 border-fritz-stone-200 text-fritz-stone-400'}`}>2</div>
+      <div className={`h-1 w-12 transition-colors duration-300 ${passoAtual >= 3 ? 'bg-fritz-bright-700' : 'bg-fritz-stone-200'}`}></div>
+      <div className={`flex items-center justify-center w-7 h-7 text-xs rounded-full font-bold shadow-sm transition-colors duration-300 ${passoAtual >= 3 ? 'bg-fritz-bright-700 text-white ring-4 ring-fritz-bright-100' : 'bg-white border-2 border-fritz-stone-200 text-fritz-stone-400'}`}>3</div>
     </div>
   </div>
 );
@@ -114,7 +120,7 @@ const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, 
 
   return (
     <th id={id} ref={thRef} style={{ width: largura, minWidth: largura, maxWidth: largura }} className="sticky top-0 z-20 bg-fritz-stone-100 shadow-[0_1px_0_0_#e5e7eb] group border-r border-transparent hover:border-fritz-stone-200 transition-colors p-0 align-middle">
-      <div onClick={() => sortKey && onSort && onSort(sortKey)} className={`flex items-center gap-2 px-4 py-4 ${sortKey ? 'cursor-pointer hover:bg-fritz-stone-200/50' : ''} select-none w-full h-full ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""}`}>
+      <div onClick={() => sortKey && onSort && onSort(sortKey)} className={`flex items-center gap-2 px-4 py-3 ${sortKey ? 'cursor-pointer hover:bg-fritz-stone-200/50' : ''} select-none w-full h-full ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""}`}>
         {children || <span className="truncate">{label}</span>}
         {sortKey && (
           <div className="flex flex-col shrink-0">
@@ -186,12 +192,12 @@ const ComboboxFamilia = ({ familias = [], valorSelecionado, onChange }: { famili
 
   return (
     <div ref={wrapperRef} className="relative w-full h-full">
-      <div onClick={() => setIsOpen(!isOpen)} className="w-full h-full flex items-center justify-between rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none transition hover:bg-white hover:border-fritz-stone-300 cursor-pointer">
+      <div onClick={() => setIsOpen(!isOpen)} className="w-full h-full flex items-center justify-between rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-2 text-sm text-fritz-stone-900 outline-none transition hover:bg-white hover:border-fritz-stone-300 cursor-pointer">
         <span className="truncate pr-4">{familiaAtual ? `${familiaAtual.codigo} - ${familiaAtual.nome}` : "Todas as Famílias"}</span>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-fritz-stone-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
       </div>
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full min-w-[280px] rounded-xl border border-fritz-stone-200 bg-white shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute z-50 mt-1 w-full min-w-[280px] rounded-xl border border-fritz-stone-200 bg-white shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           <div className="p-2 border-b border-fritz-stone-100 bg-fritz-stone-50/50">
             <input type="text" autoFocus placeholder="Buscar código ou descrição..." value={buscaInt} onChange={(e) => setBuscaInt(e.target.value)} className="w-full rounded-lg border border-fritz-stone-200 bg-white px-3 py-2 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-500 focus:ring-1 focus:ring-fritz-bright-500" />
           </div>
@@ -252,6 +258,7 @@ export default function PromocoesPage() {
   // Estados de Busca de Rascunhos (Passo 1 - RASCUNHOS)
   const [tabelaBuscaRascunho, setTabelaBuscaRascunho] = useState("");
   const [validadeBuscaRascunho, setValidadeBuscaRascunho] = useState("");
+  const [parametrosRascunho, setParametrosRascunho] = useState<DraftParameter[]>([]);
   const [loadingRascunho, setLoadingRascunho] = useState(false);
   
   // Estados de Loading do Passo 3
@@ -297,9 +304,11 @@ export default function PromocoesPage() {
       if (!token || !contexto?.empresa?.id) return;
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/senior/companies`, { headers: { "Authorization": `Bearer ${token}` } });
       if (res.ok) {
-        const data = await res.json();
-        const empresaAtual = data.find((e: any) => e.codigo === contexto.empresa.id);
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : null;
+        if (!data) return;
         
+        const empresaAtual = data.find((e: any) => e.codigo === contexto.empresa.id);
         if (empresaAtual) {
           if (empresaAtual.familias) setFamiliasDropdown(empresaAtual.familias);
           if (empresaAtual.tabelasPreco) setTabelasSenior(empresaAtual.tabelasPreco);
@@ -308,9 +317,26 @@ export default function PromocoesPage() {
     } catch (e) { console.error("Erro ao carregar dados iniciais", e); }
   };
 
+  const carregarParametrosRascunho = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token || !contexto?.empresa?.id) return;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/findPromotionParameters?company=${contexto.empresa.id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setParametrosRascunho(data.response || []);
+      }
+    } catch (e) {
+      console.error("Erro ao carregar parâmetros de rascunho", e);
+    }
+  };
+
   useEffect(() => {
     if (autorizado) {
       carregarDadosIniciais();
+      carregarParametrosRascunho();
     }
   }, [contexto, autorizado]);
 
@@ -319,7 +345,8 @@ export default function PromocoesPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const payload: Record<string, any> = { company: contexto.empresa.id, page: novaPagina, searchParameters: termoAtual, recordsPerPage: 50 };
+      // AJUSTADO: recordsPerPage alterado de 50 para 15 registros por página para caber perfeito na tela
+      const payload: Record<string, any> = { company: contexto.empresa.id, page: novaPagina, searchParameters: termoAtual, recordsPerPage: 15 };
       if (familiaAtual.trim() !== "") payload.family = familiaAtual.trim();
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/search`, {
@@ -335,7 +362,7 @@ export default function PromocoesPage() {
     } catch (error) {
       showToast("Falha ao buscar produtos no ERP.", "error");
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 100);
     }
   }
 
@@ -347,7 +374,7 @@ export default function PromocoesPage() {
     const token = localStorage.getItem("token");
 
     try {
-      const dataInicialSplit = (validadeBuscaRascunho.split("-")[0] || "").trim();
+      const dataInicialSplit = (validadeBuscaRascunho.split(" - ")[0] || "").trim();
 
       const params = new URLSearchParams({
         company: String(contexto.empresa.id),
@@ -362,12 +389,10 @@ export default function PromocoesPage() {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
-      if (!response.ok) {
-        throw new Error("Erro na API de Busca");
-      }
+      if (!response.ok) throw new Error("Erro na API de Busca");
 
       const data = await response.json();
-      const itensEncontrados = data.products || data;
+      const itensEncontrados = data.products || data.response || (Array.isArray(data) ? data : []);
 
       if (!Array.isArray(itensEncontrados) || itensEncontrados.length === 0) {
         showToast("Nenhum produto pendente para esta tabela e validade.", "info");
@@ -509,7 +534,13 @@ export default function PromocoesPage() {
     showToast(`${selecionadosOficina.size} itens atualizados com sucesso!`, "success");
   }
 
-  const abrirModalSetup = () => setModalValidadeAberto(true);
+  const abrirModalSetup = () => {
+    setTabelaSelecionada("");
+    setValidadeSelecionada("");
+    setDataInicioNova("");
+    setDataFimNova("");
+    setModalValidadeAberto(true);
+  };
   
   async function processarAvancoSimulacao(e: FormEvent) {
     e.preventDefault();
@@ -577,6 +608,7 @@ export default function PromocoesPage() {
           inboundIpi: Number(r.inboundIpi) || 0,
           inboundFreight: Number(r.inboundFreight) || 0,
           fixedCoast: Number(r.fixedCoast) || 0,
+          inboundInvoicePrice: Number(r.inboundInvoicePrice) || 0,
           basePrice: Number(precoSimulado) ? parseFloat(Number(precoSimulado).toFixed(2)) : 0
         };
       })
@@ -594,6 +626,7 @@ export default function PromocoesPage() {
       if (!response.ok) throw new Error("Erro na API");
       
       showToast("Rascunho de simulação salvo com sucesso! Você pode retomar mais tarde.", "success");
+      await carregarParametrosRascunho();
     } catch (e) { 
       showToast("Erro ao salvar simulação.", "error"); 
     } finally { 
@@ -601,33 +634,62 @@ export default function PromocoesPage() {
     }
   }
 
-  async function executarExclusaoRascunho(silencioso = false) {
+  async function executorsExclusaoRascunho(silencioso = false) {
     const token = localStorage.getItem("token");
     if (!silencioso) setExcluindoRascunho(true);
     try {
       const dataInicialSplit = (validadeSelecionada.split(" - ")[0] || "").trim();
-      const params = new URLSearchParams({
+      
+      const itensParaDeletar = silencioso
+        ? produtosNoCarrinhoOrdenados.map(p => ({ code: String(p.code) }))
+        : Array.from(selecionadosOficina).map(code => ({ code: String(code) }));
+
+      if (!silencioso && itensParaDeletar.length === 0) {
+        showToast("Selecione pelo menos um produto para excluir.", "info");
+        setModalExcluirAberto(false);
+        setExcluindoRascunho(false);
+        return;
+      }
+      
+      const payloadDelete = {
         company: String(contexto?.empresa.id || ""),
         tablePrice: tabelaSelecionada,
-        initialDate: dataInicialSplit
-      });
+        initialDate: dataInicialSplit,
+        products: itensParaDeletar
+      };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/promotion?${params.toString()}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/promotion`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify(payloadDelete)
       });
       
       if (!response.ok && !silencioso) throw new Error("Falha na exclusão");
 
       if (!silencioso) {
-        showToast("Rascunho excluído da base com sucesso.", "success");
+        showToast(`${itensParaDeletar.length} rascunho(s) excluído(s) com sucesso.`, "success");
+        
+        setProdutosSelecionados(prev => {
+          const novoMapa = new Map(prev);
+          itensParaDeletar.forEach(item => novoMapa.delete(item.code));
+          return novoMapa;
+        });
+        
+        setSelecionadosOficina(new Set());
         setModalExcluirAberto(false);
-        setPassoAtual(1);
-        setModoTela("RASCUNHOS");
-        setProdutosSelecionados(new Map());
+
+        await carregarParametrosRascunho();
+
+        if (produtosSelecionados.size - itensParaDeletar.length === 0) {
+          setPassoAtual(1);
+          setModoTela("RASCUNHOS");
+        }
       }
     } catch (e) {
-      if (!silencioso) showToast("Erro ao tentar excluir o rascunho.", "error");
+      if (!silencioso) showToast("Erro ao tentar excluir o(s) rascunho(s).", "error");
     } finally {
       if (!silencioso) setExcluindoRascunho(false);
     }
@@ -649,7 +711,8 @@ export default function PromocoesPage() {
       });
       if (!responseEfetivar.ok) throw new Error("Erro na API de Efetivação");
       
-      await executarExclusaoRascunho(true);
+      await executorsExclusaoRascunho(true);
+      await carregarParametrosRascunho();
 
       setModalSucessoAberto(true);
       setProdutosSelecionados(new Map());
@@ -691,7 +754,8 @@ export default function PromocoesPage() {
 
   const tabelasUnicas = Array.from(new Set(tabelasSenior.map(t => t.codtpr)));
   const validadesDisponiveisSetup = tabelasSenior.filter(t => t.codtpr === tabelaSelecionada);
-  const validadesDisponiveisBusca = tabelasSenior.filter(t => t.codtpr === tabelaBuscaRascunho);
+  
+  const validadesRascunhoSelecionado = parametrosRascunho.find(p => p.tablePrice === tabelaBuscaRascunho)?.dueDates || [];
 
   const formatarDataErp = (dataStr: string) => {
     if (!dataStr) return "";
@@ -721,7 +785,8 @@ export default function PromocoesPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-fritz-stone-50 w-full relative">
+    // CORREÇÃO UX: h-screen e flex-col na casca principal para travar o viewport sem barra de rolagem global
+    <div className="flex flex-col h-screen bg-fritz-stone-50 w-full relative overflow-hidden">
       
       {toast.show && (
         <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-right-8 fade-in duration-300">
@@ -749,47 +814,56 @@ export default function PromocoesPage() {
         </div>
       )}
 
-      <main className="flex-1 flex flex-col w-full min-w-0 p-8">
-        
-        <div className="mb-2">
-          <PageHeader 
-            title="Gerador de Tabelas Promocionais" 
-            description="Construa campanhas de preços massivas e valide os lucros em tempo real."
-            badgeText="Integrado ao ERP Senior"
-          />
-        </div>
+      {/* Cabeçalho Fixo */}
+      <div className="px-8 pt-4 pb-0 shrink-0">
+        <PageHeader 
+          title="Gerador de Tabelas Promocionais" 
+          description="Construa campanhas de preços massivas e valide os lucros em tempo real."
+          badgeText="Integrado ao ERP Senior"
+        />
+      </div>
 
+      {/* Corpo com Flex Dynamic Fill */}
+      <main className="flex-1 flex flex-col w-full min-h-0 px-8 pb-4 pt-2">
+        
         {passoAtual === 1 && (
-          <div className="flex gap-2 border-b border-fritz-stone-200 mb-6 mt-4">
-            <button 
-              onClick={() => { setModoTela('NOVA'); setProdutosSelecionados(new Map()); }} 
-              className={`px-6 py-3 font-bold text-sm transition-all duration-200 relative ${modoTela === 'NOVA' ? 'text-fritz-bright-700' : 'text-fritz-stone-500 hover:text-fritz-stone-700 hover:bg-fritz-stone-100/50 rounded-t-lg'}`}
-            >
-              Criar Nova Campanha
-              {modoTela === 'NOVA' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-fritz-bright-700 rounded-t"></div>}
-            </button>
-            <button 
-              onClick={() => { setModoTela('RASCUNHOS'); setProdutosSelecionados(new Map()); }} 
-              className={`px-6 py-3 font-bold text-sm transition-all duration-200 relative flex items-center gap-2 ${modoTela === 'RASCUNHOS' ? 'text-fritz-bright-700' : 'text-fritz-stone-500 hover:text-fritz-stone-700 hover:bg-fritz-stone-100/50 rounded-t-lg'}`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-              Meus Rascunhos Salvos
-              {modoTela === 'RASCUNHOS' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-fritz-bright-700 rounded-t"></div>}
-            </button>
+          <div className="flex items-center justify-between shrink-0 mb-3 mt-1">
+            <div className="flex bg-fritz-stone-100/80 p-1 rounded-xl w-fit border border-fritz-stone-200 shadow-inner">
+              <button 
+                onClick={() => { setModoTela('NOVA'); setProdutosSelecionados(new Map()); }} 
+                className={`px-8 py-2 font-bold text-sm transition-all duration-200 rounded-lg flex items-center gap-2 ${modoTela === 'NOVA' ? 'bg-white text-fritz-bright-700 shadow-sm ring-1 ring-fritz-stone-200/50' : 'text-fritz-stone-500 hover:text-fritz-stone-700 hover:bg-fritz-stone-200/50'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                Criar Nova Campanha
+              </button>
+              <button 
+                onClick={() => { setModoTela('RASCUNHOS'); setProdutosSelecionados(new Map()); }} 
+                className={`px-8 py-2 font-bold text-sm transition-all duration-200 rounded-lg flex items-center gap-2 ${modoTela === 'RASCUNHOS' ? 'bg-white text-fritz-bright-700 shadow-sm ring-1 ring-fritz-stone-200/50' : 'text-fritz-stone-500 hover:text-fritz-stone-700 hover:bg-fritz-stone-200/50'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Meus Rascunhos Salvos
+              </button>
+            </div>
+            <StepperVisual passoAtual={passoAtual} />
           </div>
         )}
 
-        <StepperVisual passoAtual={passoAtual} />
+        {passoAtual !== 1 && (
+          <div className="flex justify-center mb-6 mt-2 shrink-0">
+             <StepperVisual passoAtual={passoAtual} />
+          </div>
+        )}
 
         {passoAtual === 1 && modoTela === 'NOVA' && (
-          <div className="flex flex-col flex-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-fritz-stone-200">
-              <form onSubmit={(e) => { e.preventDefault(); buscarProdutos(1, busca, buscaFamilia); }} className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          // flex-1 min-h-0 força o container a respeitar os limites do flexbox pai e não estourar a janela do browser
+          <div className="flex flex-col flex-1 min-h-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="mb-3 rounded-2xl bg-white p-3 shadow-sm border border-fritz-stone-200 shrink-0">
+              <form onSubmit={(e) => { e.preventDefault(); buscarProdutos(1, busca, buscaFamilia); }} className="grid grid-cols-1 md:grid-cols-12 gap-3">
                 <div className="relative md:col-span-3 z-30">
                   <ComboboxFamilia familias={familiasDropdown} valorSelecionado={buscaFamilia} onChange={setBuscaFamilia} />
                 </div>
                 <div className="relative md:col-span-7">
-                  <input ref={inputBuscaRef} type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Pesquisar por código, descrição ou palavra-chave..." className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 pl-4 pr-12 py-3 text-sm text-fritz-stone-900 outline-none transition focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100" />
+                  <input ref={inputBuscaRef} type="text" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Pesquisar por código, descrição ou palavra-chave..." className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 pl-4 pr-12 py-2 text-sm text-fritz-stone-900 outline-none transition focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100" />
                   {(busca || buscaFamilia) && !loading && (
                     <button type="button" onClick={() => { setBusca(""); setBuscaFamilia(""); buscarProdutos(1, "", ""); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-fritz-stone-400 hover:text-fritz-stone-700 p-1">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -802,15 +876,16 @@ export default function PromocoesPage() {
                   )}
                 </div>
                 <div className="md:col-span-2">
-                  <Button type="submit" disabled={loading} className="w-full bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-3 rounded-xl font-semibold text-sm h-full flex justify-center items-center">
+                  <Button type="submit" disabled={loading} className="w-full bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-2 rounded-xl font-semibold text-sm h-full flex justify-center items-center">
                     Filtrar Itens
                   </Button>
                 </div>
               </form>
             </div>
 
-            <div className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden flex-1 flex flex-col">
-              <div ref={scrollInternoRef} className="overflow-auto max-h-[calc(100vh-450px)] relative">
+            {/* CORREÇÃO CHAVE: O container agora é flex-1 min-h-0 para preencher toda a tela e forçar o scroll interno */}
+            <div className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
+              <div ref={scrollInternoRef} className="overflow-auto flex-1 relative">
                 <table className="w-full text-left text-sm text-fritz-stone-700 table-fixed min-w-max">
                   <thead className="bg-fritz-stone-100/50 text-xs font-semibold uppercase tracking-wider text-fritz-stone-500">
                     <tr>
@@ -830,34 +905,34 @@ export default function PromocoesPage() {
                     {loadingContexto || (loading && produtos.length === 0) ? (
                       Array.from({ length: 8 }).map((_, index) => (
                         <tr key={`sk-${index}`}>
-                          <td className="px-4 py-4 text-center"><div className="h-4 w-4 rounded bg-gray-200 animate-pulse inline-block" /></td>
-                          <td className="px-4 py-4"><div className="h-4 w-24 rounded bg-gray-200 animate-pulse" /></td>
-                          <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse" /></td>
-                          <td className="px-4 py-4"><div className="h-4 w-64 rounded bg-gray-200 animate-pulse" /></td>
-                          <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse ml-auto" /></td>
-                          <td className="px-4 py-4"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse ml-auto" /></td>
+                          <td className="px-4 py-3 text-center"><div className="h-4 w-4 rounded bg-gray-200 animate-pulse inline-block" /></td>
+                          <td className="px-4 py-3"><div className="h-4 w-24 rounded bg-gray-200 animate-pulse" /></td>
+                          <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse" /></td>
+                          <td className="px-4 py-3"><div className="h-4 w-64 rounded bg-gray-200 animate-pulse" /></td>
+                          <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse ml-auto" /></td>
+                          <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-gray-200 animate-pulse ml-auto" /></td>
                         </tr>
                       ))
                     ) : produtos.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-20 text-center text-fritz-stone-400">Nenhum item localizado na busca.</td>
+                        <td colSpan={6} className="px-6 py-10 text-center text-fritz-stone-400">Nenhum item localizado na busca.</td>
                       </tr>
                     ) : (
                       produtos.map((produto) => {
                         const isSelecionado = produtosSelecionados.has(produto.code);
                         return (
                           <tr key={produto.code} className={`transition-colors cursor-pointer ${isSelecionado ? "bg-fritz-bright-50/70" : "hover:bg-fritz-stone-50"}`} onClick={() => toggleSelecionarCarrinho(produto)}>
-                            <td className="px-4 py-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                            <td className="px-4 py-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
                               <input type="checkbox" checked={isSelecionado} onChange={() => toggleSelecionarCarrinho(produto)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-bright-600 focus:ring-fritz-bright-600 cursor-pointer" />
                             </td>
-                            <td className="px-4 py-4 truncate text-fritz-stone-600 align-middle">
+                            <td className="px-4 py-3 truncate text-fritz-stone-600 align-middle">
                               {produto.familyCode && <span className="inline-flex items-center justify-center rounded bg-fritz-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-fritz-stone-500 mr-2 border border-fritz-stone-200">{produto.familyCode}</span>}
                               {produto.familyDescription}
                             </td>
-                            <td className="px-4 py-4 truncate align-middle font-medium">{produto.code}</td>
-                            <td className="px-4 py-4 align-middle truncate">{produto.description}</td>
-                            <td className="px-4 py-4 align-middle font-medium text-fritz-stone-600 text-right">{formatarMoeda(produto.average)}</td>
-                            <td className="px-4 py-4 align-middle font-bold text-fritz-stone-800 text-right">{formatarMoeda(produto.basePrice)}</td>
+                            <td className="px-4 py-3 truncate align-middle font-medium">{produto.code}</td>
+                            <td className="px-4 py-3 align-middle truncate">{produto.description}</td>
+                            <td className="px-4 py-3 align-middle font-medium text-fritz-stone-600 text-right">{formatarMoeda(produto.average)}</td>
+                            <td className="px-4 py-3 align-middle font-bold text-fritz-stone-800 text-right">{formatarMoeda(produto.basePrice)}</td>
                           </tr>
                         );
                       })
@@ -866,7 +941,8 @@ export default function PromocoesPage() {
                 </table>
               </div>
 
-              <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-4 mt-auto">
+              {/* Rodapé sempre visível na base da grid */}
+              <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1">
                     <button onClick={() => mudarPagina(pagina - 1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50">
@@ -885,7 +961,7 @@ export default function PromocoesPage() {
                   )}
                 </div>
 
-                <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2.5 rounded-xl font-semibold shadow-sm transition-all">
+                <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2 rounded-xl font-semibold shadow-sm transition-all">
                   Configurar Campanha ({quantidadeCarrinho})
                 </Button>
               </div>
@@ -894,7 +970,7 @@ export default function PromocoesPage() {
         )}
 
         {passoAtual === 1 && modoTela === 'RASCUNHOS' && (
-          <div className="flex flex-col items-center justify-center flex-1 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex flex-col items-center justify-center flex-1 animate-in fade-in slide-in-from-top-2 duration-300 min-h-0">
             <div className="bg-white rounded-3xl shadow-sm border border-fritz-stone-200 w-full max-w-xl overflow-hidden relative">
               <div className="absolute top-0 left-0 w-full h-2 bg-fritz-bright-700"></div>
               <div className="p-10 text-center">
@@ -914,8 +990,8 @@ export default function PromocoesPage() {
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
                     >
                       <option value="">Selecione uma tabela...</option>
-                      {tabelasUnicas.map(cod => (
-                        <option key={cod} value={cod}>Tabela {cod}</option>
+                      {parametrosRascunho.map(p => (
+                        <option key={p.tablePrice} value={p.tablePrice}>Tabela {p.tablePrice}</option>
                       ))}
                     </select>
                   </div>
@@ -930,23 +1006,23 @@ export default function PromocoesPage() {
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="">Selecione o período do rascunho...</option>
-                      {validadesDisponiveisBusca.map((val, idx) => {
-                         const dtIni = formatarDataErp(val.datini);
-                         const dtFim = formatarDataErp(val.datfim);
-                         return (
-                           <option key={idx} value={`${dtIni} - ${dtFim}`}>{dtIni} a {dtFim}</option>
-                         );
-                      })}
+                      {validadesRascunhoSelecionado.map((val, idx) => (
+                        <option key={idx} value={`${val.initialDate} - ${val.finalDate}`}>
+                          {val.initialDate} a {val.finalDate}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="pt-6">
-                    <Button type="submit" disabled={loadingRascunho} className="w-full bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-4 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition-transform active:scale-[0.98]">
+                    <Button type="submit" disabled={loadingRascunho || parametrosRascunho.length === 0} className="w-full bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-4 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50">
                       {loadingRascunho ? (
                         <>
                           <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                           Buscando no ERP...
                         </>
+                      ) : parametrosRascunho.length === 0 ? (
+                        "Nenhum rascunho pendente"
                       ) : (
                         "Carregar Rascunho Completo"
                       )}
@@ -958,9 +1034,7 @@ export default function PromocoesPage() {
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* MODAL DE CONFIGURAÇÃO (CORRIGIDO: Apenas modalValidadeAberto) */}
-        {/* ========================================================= */}
+        {/* CORREÇÃO DO BLOQUEIO: Modal abre livre baseado apenas na flag modalValidadeAberto */}
         {modalValidadeAberto && (
           <div className="fixed inset-0 bg-fritz-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl shadow-xl w-[500px] overflow-hidden animate-in zoom-in-95 duration-200">
@@ -1023,7 +1097,7 @@ export default function PromocoesPage() {
                   )}
 
                   <div className="pt-6 flex gap-3">
-                    <Button type="button" onClick={() => setModalValidadeAberto(false)} className="flex-1 bg-white border border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 py-3 rounded-xl font-semibold">Voltar</Button>
+                    <Button type="button" onClick={() => { setModalValidadeAberto(false); setPassoAtual(1); }} className="flex-1 bg-white border border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 py-3 rounded-xl font-semibold">Voltar</Button>
                     <Button type="submit" disabled={gravandoNovaValidade} className="flex-1 bg-fritz-bright-700 hover:bg-fritz-bright-800 text-white py-3 rounded-xl font-semibold flex justify-center items-center">
                       {gravandoNovaValidade ? "Validando no ERP..." : "Simular preços"}
                     </Button>
@@ -1035,7 +1109,7 @@ export default function PromocoesPage() {
         )}
 
         {passoAtual === 3 && (
-          <div className="bg-white rounded-2xl border border-fritz-stone-200 shadow-sm p-6 flex flex-col flex-1 animate-in fade-in slide-in-from-right-8 duration-300 relative">
+          <div className="bg-white rounded-2xl border border-fritz-stone-200 shadow-sm p-6 flex flex-col flex-1 animate-in fade-in slide-in-from-right-8 duration-300 relative min-h-0">
             
             {selecionadosOficina.size > 0 && (
               <div className="absolute top-2 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
@@ -1058,7 +1132,7 @@ export default function PromocoesPage() {
                 <div className="bg-white rounded-2xl shadow-xl w-[400px] overflow-hidden animate-in zoom-in-95 duration-200">
                   <div className="p-6">
                     <h3 className="text-lg font-bold text-fritz-stone-900 mb-1">Atualização em Lote</h3>
-                    <p className="text-sm text-fritz-stone-500 mb-6">Aplica valores simultaneamente nos {selecionadosOficina.size} itens marcados.</p>
+                    <p className="text-sm text-fritz-stone-500 mb-6">Aplica values simultaneamente nos {selecionadosOficina.size} itens marcados.</p>
                     
                     <form onSubmit={aplicarEdicaoEmMassaPromo} className="space-y-4">
                       <div>
@@ -1091,18 +1165,20 @@ export default function PromocoesPage() {
               </div>
             )}
 
-            <div className="flex justify-between items-start mb-6">
+            {/* CORREÇÃO UX NO PASSO 3: Título na esquerda e botão Voltar no extremo oposto */}
+            <div className="flex justify-between items-start mb-6 shrink-0">
               <div>
                 <h2 className="text-2xl font-black text-fritz-stone-900 tracking-tight">Simulador Estratégico de Margens</h2>
                 <p className="text-sm text-fritz-stone-500 mt-1">Campanha vinculada à tabela <strong className="text-fritz-bright-700 font-bold">{tabelaSelecionada}</strong> ({validadeSelecionada})</p>
               </div>
-              <Button onClick={voltarParaSelecao} className="text-sm font-semibold text-fritz-stone-500 hover:text-fritz-stone-900 underline bg-transparent shadow-none border-none p-0 h-auto">
-                ← Voltar para listagem
+              <Button onClick={voltarParaSelecao} className="bg-white border border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 hover:text-fritz-stone-900 px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Voltar para listagem
               </Button>
             </div>
 
-            <div className="rounded-xl border border-fritz-stone-200 overflow-hidden flex-1 mb-6">
-              <div className="overflow-auto max-h-[calc(100vh-380px)] relative">
+            <div className="rounded-xl border border-fritz-stone-200 overflow-hidden flex-1 flex flex-col min-h-0 mb-4">
+              <div className="overflow-auto flex-1 relative">
                 <table className="w-full text-left text-sm text-fritz-stone-700 table-fixed min-w-max">
                   <thead className="bg-fritz-stone-100/50 text-xs font-semibold uppercase tracking-wider text-fritz-stone-500">
                     <tr>
@@ -1151,10 +1227,10 @@ export default function PromocoesPage() {
 
                       return (
                         <tr key={rascunho.code} className={`transition-colors ${isSelecionadoOficina ? "bg-fritz-stone-50" : "hover:bg-fritz-stone-50/60"}`}>
-                          <td className="px-4 py-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-4 py-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
                             <input type="checkbox" checked={isSelecionadoOficina} onChange={() => toggleSelecionarOficina(rascunho.code)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-stone-600 focus:ring-fritz-stone-600 cursor-pointer" />
                           </td>
-                          <td className="px-4 py-4 truncate text-fritz-stone-600 align-middle text-xs" title={`${rascunho.familyCode || ''} - ${rascunho.familyDescription || 'Sem Família'}`}>
+                          <td className="px-4 py-3 truncate text-fritz-stone-600 align-middle text-xs" title={`${rascunho.familyCode || ''} - ${rascunho.familyDescription || 'Sem Família'}`}>
                             {rascunho.familyCode && (
                               <span className="inline-flex items-center justify-center rounded bg-fritz-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-fritz-stone-500 mr-2 border border-fritz-stone-200">
                                 {rascunho.familyCode}
@@ -1162,36 +1238,36 @@ export default function PromocoesPage() {
                             )}
                             {rascunho.familyDescription || "-"}
                           </td>
-                          <td className="px-4 py-4 font-mono font-medium text-fritz-stone-800">{rascunho.code}</td>
-                          <td className="px-4 py-4 truncate font-medium text-fritz-stone-900">{rascunho.description}</td>
+                          <td className="px-4 py-3 font-mono font-medium text-fritz-stone-800">{rascunho.code}</td>
+                          <td className="px-4 py-3 truncate font-medium text-fritz-stone-900">{rascunho.description}</td>
                           
-                          <td className="px-4 py-4 font-medium text-right text-fritz-stone-600">
+                          <td className="px-4 py-3 font-medium text-right text-fritz-stone-600">
                             <CelulaInteligente tipo="moeda" align="right" valor={rascunho.average} onChange={(v: number) => handleEditPromo(produtoBase, "average", v)} />
                           </td>
 
-                          <td className="px-4 py-4 text-right font-extrabold text-fritz-bright-700 bg-fritz-bright-50/30 select-none">
+                          <td className="px-4 py-3 text-right font-extrabold text-fritz-bright-700 bg-fritz-bright-50/30 select-none">
                             {formatarMoeda(precoSimuladoRealtime)}
                           </td>
 
-                          <td className="px-4 py-4 font-black text-fritz-green-700 bg-fritz-green-50/20">
+                          <td className="px-4 py-3 font-black text-fritz-green-700 bg-fritz-green-50/20">
                             <CelulaInteligente tipo="moeda" align="right" valor={precoFinalPromo} onChange={(v: number) => handleEditPromo(produtoBase, "basePricePromo", v)} />
                           </td>
 
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIcms} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIcms", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundCofinsAndPis} onChange={(v: number) => handleEditPromo(produtoBase, "inboundCofinsAndPis", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIpi} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIpi", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundFreight} onChange={(v: number) => handleEditPromo(produtoBase, "inboundFreight", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIcms} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIcms", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundCofinsAndPis} onChange={(v: number) => handleEditPromo(produtoBase, "inboundCofinsAndPis", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIpi} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIpi", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundFreight} onChange={(v: number) => handleEditPromo(produtoBase, "inboundFreight", v)} /></td>
 
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.icms} onChange={(v: number) => handleEditPromo(produtoBase, "icms", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.ipi} onChange={(v: number) => handleEditPromo(produtoBase, "ipi", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.pis} onChange={(v: number) => handleEditPromo(produtoBase, "pis", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.cofins} onChange={(v: number) => handleEditPromo(produtoBase, "cofins", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.freight} onChange={(v: number) => handleEditPromo(produtoBase, "freight", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.icms} onChange={(v: number) => handleEditPromo(produtoBase, "icms", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.ipi} onChange={(v: number) => handleEditPromo(produtoBase, "ipi", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.pis} onChange={(v: number) => handleEditPromo(produtoBase, "pis", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.cofins} onChange={(v: number) => handleEditPromo(produtoBase, "cofins", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.freight} onChange={(v: number) => handleEditPromo(produtoBase, "freight", v)} /></td>
 
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.fixedCoast} onChange={(v: number) => handleEditPromo(produtoBase, "fixedCoast", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.internalComission} onChange={(v: number) => handleEditPromo(produtoBase, "internalComission", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.externalComission} onChange={(v: number) => handleEditPromo(produtoBase, "externalComission", v)} /></td>
-                          <td className="px-4 py-4"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.profit} onChange={(v: number) => handleEditPromo(produtoBase, "profit", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.fixedCoast} onChange={(v: number) => handleEditPromo(produtoBase, "fixedCoast", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.internalComission} onChange={(v: number) => handleEditPromo(produtoBase, "internalComission", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.externalComission} onChange={(v: number) => handleEditPromo(produtoBase, "externalComission", v)} /></td>
+                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.profit} onChange={(v: number) => handleEditPromo(produtoBase, "profit", v)} /></td>
                         </tr>
                       );
                     })}
@@ -1200,11 +1276,20 @@ export default function PromocoesPage() {
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t border-fritz-stone-100 gap-4">
+            <div className="flex justify-between items-center pt-2 gap-4 shrink-0">
               <div>
-                <Button onClick={() => setModalExcluirAberto(true)} className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                <Button 
+                  onClick={() => {
+                    if (selecionadosOficina.size === 0) {
+                      showToast("Marque as caixas dos produtos que deseja excluir.", "error");
+                      return;
+                    }
+                    setModalExcluirAberto(true);
+                  }} 
+                  className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                  Excluir Rascunho
+                  Excluir Rascunho {selecionadosOficina.size > 0 ? `(${selecionadosOficina.size})` : ''}
                 </Button>
               </div>
               <div className="flex gap-4">
@@ -1226,23 +1311,20 @@ export default function PromocoesPage() {
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* MODAL CONFIRMAR EXCLUSÃO DE RASCUNHO                      */}
-        {/* ========================================================= */}
         {modalExcluirAberto && (
           <div className="fixed inset-0 bg-fritz-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
             <div className="bg-white rounded-[2rem] shadow-2xl w-[420px] overflow-hidden animate-in zoom-in-95 duration-300 text-center p-8">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100 text-red-600 mb-5 shadow-inner border-4 border-white ring-4 ring-red-50">
                 <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
               </div>
-              <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Excluir este rascunho?</h3>
-              <p className="text-sm text-fritz-stone-500 mb-8 px-2">Essa ação irá limpar todas as simulações pendentes para a tabela <strong>{tabelaSelecionada}</strong> com validade em <strong>{validadeSelecionada.split(" - ")[0]}</strong>. Isso não afeta os preços já aprovados.</p>
+              <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Excluir {selecionadosOficina.size} produto(s)?</h3>
+              <p className="text-sm text-fritz-stone-500 mb-8 px-2">Essa ação irá remover definitivamente os <strong>{selecionadosOficina.size}</strong> itens selecionados do rascunho da tabela <strong>{tabelaSelecionada}</strong>. Isso não afeta os preços já aprovados.</p>
               
               <div className="flex w-full gap-3">
                 <Button onClick={() => setModalExcluirAberto(false)} className="flex-1 bg-white border border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 py-3 rounded-xl font-semibold">
                   Cancelar
                 </Button>
-                <Button onClick={() => executarExclusaoRascunho(false)} disabled={excluindoRascunho} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
+                <Button onClick={() => executorsExclusaoRascunho(false)} disabled={excluindoRascunho} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
                   {excluindoRascunho ? "Excluindo..." : "Sim, excluir"}
                 </Button>
               </div>
@@ -1250,9 +1332,6 @@ export default function PromocoesPage() {
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* MODAL DE SUCESSO PREMIUM (FINALIZAÇÃO)                    */}
-        {/* ========================================================= */}
         {modalSucessoAberto && (
           <div className="fixed inset-0 bg-fritz-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
             <div className="bg-white rounded-[2rem] shadow-2xl w-[460px] overflow-hidden animate-in zoom-in-95 duration-300 text-center p-10 relative">
