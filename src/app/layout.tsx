@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard | Fritz Materiais Elétricos",
+  title: "Painel | Fritz Materiais Elétricos",
   description: "Painel gerencial da Fritz",
 };
 
