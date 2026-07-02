@@ -159,7 +159,7 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
 
   if (editando) {
     return (
-      <div className={`flex items-center h-[32px] gap-1 bg-white ring-2 ring-fritz-bright-600 rounded shadow-sm px-2 -mx-2`}>
+      <div className={`flex items-center h-[32px] gap-1 bg-white ring-2 ring-fritz-bright-600 rounded shadow-sm px-2 py-1 -mx-2`}>
         {prefixo && tipo !== 'moeda' && <span className="text-fritz-stone-400 text-xs font-semibold">{prefixo}</span>}
         <input type={tipo === "text" ? "text" : "number"} step="any" autoFocus onFocus={(e) => e.target.select()} value={valorInput} onChange={(e) => setValorInput(e.target.value)} onBlur={handleBlur} onKeyDown={handleKeyDown} className={`bg-transparent outline-none !border-0 !ring-0 !shadow-none text-fritz-stone-900 ${align === "right" ? "text-right" : "text-left"} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium w-full p-0 m-0`} />
         {sufixo && tipo !== 'porcentagem' && <span className="text-fritz-stone-400 text-xs font-semibold">{sufixo}</span>}
@@ -168,7 +168,12 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
   }
 
   return (
-    <div onClick={() => setEditando(true)} className={`flex items-center h-[32px] cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white rounded px-2 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "justify-end" : "justify-start"}`}>
+    <div 
+      tabIndex={0}
+      onFocus={() => setEditando(true)}
+      onClick={() => setEditando(true)} 
+      className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white focus:bg-white focus:ring-2 focus:ring-fritz-bright-600 focus:outline-none rounded px-2 py-1 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
+    >
       {exibicao}
     </div>
   );
@@ -345,7 +350,6 @@ export default function PromocoesPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      // AJUSTADO: recordsPerPage alterado de 50 para 15 registros por página para caber perfeito na tela
       const payload: Record<string, any> = { company: contexto.empresa.id, page: novaPagina, searchParameters: termoAtual, recordsPerPage: 15 };
       if (familiaAtual.trim() !== "") payload.family = familiaAtual.trim();
 
@@ -458,7 +462,9 @@ export default function PromocoesPage() {
   }, [busca, buscaFamilia, contexto, loadingContexto, autorizado, modoTela]);
 
   function calcularPrecoSimulado(p: Product) {
-    let precoMedio = p.average || 0;
+    let precoMedio = (p.inboundInvoicePrice && p.inboundInvoicePrice > 0) 
+      ? p.inboundInvoicePrice 
+      : (p.average || 0);
     
     const pctIcmEnt = p.inboundIcms || 0;
     const pctPccEnt = p.inboundCofinsAndPis || 0;
@@ -588,34 +594,42 @@ export default function PromocoesPage() {
       company: String(contexto?.empresa.id || ""), 
       tablePrice: tabelaSelecionada,
       initialDate: dataInicialSplit,
-      products: produtosNoCarrinhoOrdenados.map(p => {
-        const r = rascunhosPromo[p.code] || p;
-        const precoSimulado = r.basePricePromo !== undefined ? r.basePricePromo : calcularPrecoSimulado(r);
-        
-        return {
-          code: String(r.code),
-          average: Number(r.average) || 0,
-          icms: Number(r.icms) || 0,
-          externalComission: Number(r.externalComission) || 0,
-          internalComission: Number(r.internalComission) || 0,
-          freight: Number(r.freight) || 0,
-          ipi: Number(r.ipi) || 0,
-          profit: Number(r.profit) || 0,
-          pis: Number(r.pis) || 0,
-          cofins: Number(r.cofins) || 0,
-          inboundIcms: Number(r.inboundIcms) || 0,
-          inboundCofinsAndPis: Number(r.inboundCofinsAndPis) || 0,
-          inboundIpi: Number(r.inboundIpi) || 0,
-          inboundFreight: Number(r.inboundFreight) || 0,
-          fixedCoast: Number(r.fixedCoast) || 0,
-          inboundInvoicePrice: Number(r.inboundInvoicePrice) || 0,
-          basePrice: Number(precoSimulado) ? parseFloat(Number(precoSimulado).toFixed(2)) : 0
-        };
+      // AQUI: Filtra apenas os produtos que estão com a checkbox marcada!
+      products: produtosNoCarrinhoOrdenados
+        .filter(p => selecionadosOficina.has(p.code))
+        .map(p => {
+          const r = rascunhosPromo[p.code] || p;
+          const precoSimulado = r.basePricePromo !== undefined ? r.basePricePromo : calcularPrecoSimulado(r);
+          
+          return {
+            code: String(r.code),
+            average: Number(r.average) || 0,
+            icms: Number(r.icms) || 0,
+            externalComission: Number(r.externalComission) || 0,
+            internalComission: Number(r.internalComission) || 0,
+            freight: Number(r.freight) || 0,
+            ipi: Number(r.ipi) || 0,
+            profit: Number(r.profit) || 0,
+            pis: Number(r.pis) || 0,
+            cofins: Number(r.cofins) || 0,
+            inboundIcms: Number(r.inboundIcms) || 0,
+            inboundCofinsAndPis: Number(r.inboundCofinsAndPis) || 0,
+            inboundIpi: Number(r.inboundIpi) || 0,
+            inboundFreight: Number(r.inboundFreight) || 0,
+            fixedCoast: Number(r.fixedCoast) || 0,
+            inboundInvoicePrice: Number(r.inboundInvoicePrice) || 0,
+            basePrice: Number(precoSimulado) ? parseFloat(Number(precoSimulado).toFixed(2)) : 0
+          };
       })
     };
   }
 
   async function salvarRascunhoSenior() {
+    if (selecionadosOficina.size === 0) {
+      showToast("Por favor, marque as caixas dos produtos que deseja salvar.", "info");
+      return;
+    }
+
     setSalvandoRascunho(true);
     const token = localStorage.getItem("token");
     try {
@@ -634,20 +648,21 @@ export default function PromocoesPage() {
     }
   }
 
-  async function executorsExclusaoRascunho(silencioso = false) {
+  async function executarExclusaoRascunho(silencioso = false) {
     const token = localStorage.getItem("token");
     if (!silencioso) setExcluindoRascunho(true);
     try {
       const dataInicialSplit = (validadeSelecionada.split(" - ")[0] || "").trim();
       
-      const itensParaDeletar = silencioso
-        ? produtosNoCarrinhoOrdenados.map(p => ({ code: String(p.code) }))
-        : Array.from(selecionadosOficina).map(code => ({ code: String(code) }));
+      // AQUI: Deleta SOMENTE os itens que estavam marcados, inclusive durante a efetivação
+      const itensParaDeletar = Array.from(selecionadosOficina).map(code => ({ code: String(code) }));
 
-      if (!silencioso && itensParaDeletar.length === 0) {
-        showToast("Selecione pelo menos um produto para excluir.", "info");
-        setModalExcluirAberto(false);
-        setExcluindoRascunho(false);
+      if (itensParaDeletar.length === 0) {
+        if (!silencioso) {
+          showToast("Selecione pelo menos um produto para excluir.", "info");
+          setModalExcluirAberto(false);
+          setExcluindoRascunho(false);
+        }
         return;
       }
       
@@ -696,6 +711,11 @@ export default function PromocoesPage() {
   }
 
   async function efetivarCampanhaSenior() {
+    if (selecionadosOficina.size === 0) {
+      showToast("Por favor, marque as caixas dos produtos que deseja efetivar.", "info");
+      return;
+    }
+
     setEfetivandoPromocao(true);
     const token = localStorage.getItem("token");
     try {
@@ -711,7 +731,7 @@ export default function PromocoesPage() {
       });
       if (!responseEfetivar.ok) throw new Error("Erro na API de Efetivação");
       
-      await executorsExclusaoRascunho(true);
+      await executarExclusaoRascunho(true);
       await carregarParametrosRascunho();
 
       setModalSucessoAberto(true);
@@ -785,7 +805,6 @@ export default function PromocoesPage() {
   }
 
   return (
-    // CORREÇÃO UX: h-screen e flex-col na casca principal para travar o viewport sem barra de rolagem global
     <div className="flex flex-col h-screen bg-fritz-stone-50 w-full relative overflow-hidden">
       
       {toast.show && (
@@ -855,7 +874,6 @@ export default function PromocoesPage() {
         )}
 
         {passoAtual === 1 && modoTela === 'NOVA' && (
-          // flex-1 min-h-0 força o container a respeitar os limites do flexbox pai e não estourar a janela do browser
           <div className="flex flex-col flex-1 min-h-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="mb-3 rounded-2xl bg-white p-3 shadow-sm border border-fritz-stone-200 shrink-0">
               <form onSubmit={(e) => { e.preventDefault(); buscarProdutos(1, busca, buscaFamilia); }} className="grid grid-cols-1 md:grid-cols-12 gap-3">
@@ -883,7 +901,6 @@ export default function PromocoesPage() {
               </form>
             </div>
 
-            {/* CORREÇÃO CHAVE: O container agora é flex-1 min-h-0 para preencher toda a tela e forçar o scroll interno */}
             <div className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
               <div ref={scrollInternoRef} className="overflow-auto flex-1 relative">
                 <table className="w-full text-left text-sm text-fritz-stone-700 table-fixed min-w-max">
@@ -941,7 +958,6 @@ export default function PromocoesPage() {
                 </table>
               </div>
 
-              {/* Rodapé sempre visível na base da grid */}
               <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1">
@@ -974,67 +990,83 @@ export default function PromocoesPage() {
             <div className="bg-white rounded-3xl shadow-sm border border-fritz-stone-200 w-full max-w-xl overflow-hidden relative">
               <div className="absolute top-0 left-0 w-full h-2 bg-fritz-bright-700"></div>
               <div className="p-10 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-fritz-stone-100 text-fritz-stone-600 mb-6">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                </div>
-                <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Recuperar Rascunho do Senior</h3>
-                <p className="text-sm text-fritz-stone-500 mb-8">Selecione a Tabela e a Validade para retomar os cálculos e edições de onde você parou.</p>
                 
-                <form onSubmit={carregarRascunhoSalvo} className="space-y-5 text-left">
-                  <div>
-                    <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Tabela de Destino</label>
-                    <select 
-                      required 
-                      value={tabelaBuscaRascunho} 
-                      onChange={(e) => { setTabelaBuscaRascunho(e.target.value); setValidadeBuscaRascunho(""); }} 
-                      className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
-                    >
-                      <option value="">Selecione uma tabela...</option>
-                      {parametrosRascunho.map(p => (
-                        <option key={p.tablePrice} value={p.tablePrice}>Tabela {p.tablePrice}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Validade da Campanha</label>
-                    <select 
-                      required 
-                      value={validadeBuscaRascunho} 
-                      onChange={(e) => setValidadeBuscaRascunho(e.target.value)} 
-                      disabled={!tabelaBuscaRascunho}
-                      className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="">Selecione o período do rascunho...</option>
-                      {validadesRascunhoSelecionado.map((val, idx) => (
-                        <option key={idx} value={`${val.initialDate} - ${val.finalDate}`}>
-                          {val.initialDate} a {val.finalDate}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="pt-6">
-                    <Button type="submit" disabled={loadingRascunho || parametrosRascunho.length === 0} className="w-full bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-4 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50">
-                      {loadingRascunho ? (
-                        <>
-                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                          Buscando no ERP...
-                        </>
-                      ) : parametrosRascunho.length === 0 ? (
-                        "Nenhum rascunho pendente"
-                      ) : (
-                        "Carregar Rascunho Completo"
-                      )}
+                {parametrosRascunho.length === 0 ? (
+                  // ESTADO VAZIO: NENHUM RASCUNHO PENDENTE
+                  <div className="flex flex-col items-center justify-center py-6 animate-in zoom-in-95 duration-300">
+                    <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-fritz-stone-50 text-fritz-stone-300 mb-6 border-2 border-dashed border-fritz-stone-200">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </div>
+                    <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Tudo limpo por aqui!</h3>
+                    <p className="text-sm text-fritz-stone-500 mb-8 max-w-[300px] mx-auto">Você não possui nenhum rascunho pendente de precificação no ERP Senior neste momento.</p>
+                    <Button onClick={() => setModoTela('NOVA')} className="bg-fritz-stone-900 hover:bg-fritz-stone-800 text-white py-3 px-8 rounded-xl font-bold shadow-md transition-transform active:scale-[0.98]">
+                      Criar Nova Campanha
                     </Button>
                   </div>
-                </form>
+                ) : (
+                  // FORMULÁRIO DE SELEÇÃO DE RASCUNHOS
+                  <>
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-fritz-stone-100 text-fritz-stone-600 mb-6">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    </div>
+                    <h3 className="text-2xl font-black text-fritz-stone-900 mb-2 tracking-tight">Recuperar Rascunho do Senior</h3>
+                    <p className="text-sm text-fritz-stone-500 mb-8">Selecione a Tabela e a Validade para retomar os cálculos e edições de onde você parou.</p>
+                    
+                    <form onSubmit={carregarRascunhoSalvo} className="space-y-5 text-left">
+                      <div>
+                        <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Tabela de Destino</label>
+                        <select 
+                          required 
+                          value={tabelaBuscaRascunho} 
+                          onChange={(e) => { setTabelaBuscaRascunho(e.target.value); setValidadeBuscaRascunho(""); }} 
+                          className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
+                        >
+                          <option value="">Selecione uma tabela...</option>
+                          {parametrosRascunho.map(p => (
+                            <option key={p.tablePrice} value={p.tablePrice}>Tabela {p.tablePrice}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Validade da Campanha</label>
+                        <select 
+                          required 
+                          value={validadeBuscaRascunho} 
+                          onChange={(e) => setValidadeBuscaRascunho(e.target.value)} 
+                          disabled={!tabelaBuscaRascunho}
+                          className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Selecione o período do rascunho...</option>
+                          {validadesRascunhoSelecionado.map((val, idx) => (
+                            <option key={idx} value={val.initialDate}>
+                              {val.initialDate} a {val.finalDate}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="pt-6">
+                        <Button type="submit" disabled={loadingRascunho} className="w-full bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-4 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition-transform active:scale-[0.98]">
+                          {loadingRascunho ? (
+                            <>
+                              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                              Buscando no ERP...
+                            </>
+                          ) : (
+                            "Carregar Rascunho Completo"
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </>
+                )}
+
               </div>
             </div>
           </div>
         )}
 
-        {/* CORREÇÃO DO BLOQUEIO: Modal abre livre baseado apenas na flag modalValidadeAberto */}
         {modalValidadeAberto && (
           <div className="fixed inset-0 bg-fritz-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl shadow-xl w-[500px] overflow-hidden animate-in zoom-in-95 duration-200">
@@ -1132,7 +1164,7 @@ export default function PromocoesPage() {
                 <div className="bg-white rounded-2xl shadow-xl w-[400px] overflow-hidden animate-in zoom-in-95 duration-200">
                   <div className="p-6">
                     <h3 className="text-lg font-bold text-fritz-stone-900 mb-1">Atualização em Lote</h3>
-                    <p className="text-sm text-fritz-stone-500 mb-6">Aplica values simultaneamente nos {selecionadosOficina.size} itens marcados.</p>
+                    <p className="text-sm text-fritz-stone-500 mb-6">Aplica valores simultaneamente nos {selecionadosOficina.size} itens marcados.</p>
                     
                     <form onSubmit={aplicarEdicaoEmMassaPromo} className="space-y-4">
                       <div>
@@ -1165,8 +1197,7 @@ export default function PromocoesPage() {
               </div>
             )}
 
-            {/* CORREÇÃO UX NO PASSO 3: Título na esquerda e botão Voltar no extremo oposto */}
-            <div className="flex justify-between items-start mb-6 shrink-0">
+            <div className="flex justify-between items-start mb-4 shrink-0">
               <div>
                 <h2 className="text-2xl font-black text-fritz-stone-900 tracking-tight">Simulador Estratégico de Margens</h2>
                 <p className="text-sm text-fritz-stone-500 mt-1">Campanha vinculada à tabela <strong className="text-fritz-bright-700 font-bold">{tabelaSelecionada}</strong> ({validadeSelecionada})</p>
@@ -1324,7 +1355,7 @@ export default function PromocoesPage() {
                 <Button onClick={() => setModalExcluirAberto(false)} className="flex-1 bg-white border border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 py-3 rounded-xl font-semibold">
                   Cancelar
                 </Button>
-                <Button onClick={() => executorsExclusaoRascunho(false)} disabled={excluindoRascunho} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
+                <Button onClick={() => executarExclusaoRascunho(false)} disabled={excluindoRascunho} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
                   {excluindoRascunho ? "Excluindo..." : "Sim, excluir"}
                 </Button>
               </div>
