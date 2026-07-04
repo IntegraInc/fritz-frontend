@@ -230,17 +230,14 @@ const ComboboxFamilia = ({ familias = [], valorSelecionado, onChange }: { famili
 export default function PromocoesPage() {
   const { contexto, loadingContexto } = useEmpresa();
 
-  // Sistema de Notificações Moderno (Toast)
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'info' });
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  // Proteção de Rota
   const [autorizado, setAutorizado] = useState<boolean | null>(null);
 
-  // Estados de Controle do Wizard e Tabs
   const [modoTela, setModoTela] = useState<'NOVA' | 'RASCUNHOS'>('NOVA');
   const [passoAtual, setPassoAtual] = useState(1);
   const [modalValidadeAberto, setModalValidadeAberto] = useState(false);
@@ -249,29 +246,24 @@ export default function PromocoesPage() {
   const [tabelaSelecionada, setTabelaSelecionada] = useState("");
   const [validadeSelecionada, setValidadeSelecionada] = useState("");
   
-  // Sub-estados para criação de nova validade
   const [dataInicioNova, setDataInicioNova] = useState("");
   const [dataFimNova, setDataFimNova] = useState("");
   const [gravandoNovaValidade, setGravandoNovaValidade] = useState(false);
 
-  // Estados da Lista Geral de Produtos (Passo 1 - NOVA)
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [familiasDropdown, setFamiliasDropdown] = useState<{codigo: string, nome: string}[]>([]);
   const [tabelasSenior, setTabelasSenior] = useState<{codtpr: string, datini: string, datfim: string}[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Estados de Busca de Rascunhos (Passo 1 - RASCUNHOS)
   const [tabelaBuscaRascunho, setTabelaBuscaRascunho] = useState("");
   const [validadeBuscaRascunho, setValidadeBuscaRascunho] = useState("");
   const [parametrosRascunho, setParametrosRascunho] = useState<DraftParameter[]>([]);
   const [loadingRascunho, setLoadingRascunho] = useState(false);
   
-  // Estados de Loading do Passo 3
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
   const [efetivandoPromocao, setEfetivandoPromocao] = useState(false);
   const [excluindoRascunho, setExcluindoRascunho] = useState(false);
 
-  // Paginação e Busca (Passo 1)
   const [busca, setBusca] = useState(""); 
   const [buscaFamilia, setBuscaFamilia] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -279,10 +271,8 @@ export default function PromocoesPage() {
   const [totalRegistros, setTotalRegistros] = useState(0);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: "asc" });
 
-  // O CARRINHO SEGURO (Passo 1)
   const [produtosSelecionados, setProdutosSelecionados] = useState<Map<string, Product>>(new Map());
 
-  // OFICINA DE PREÇOS (Passo 3): Edição e Bulk Edit
   const [rascunhosPromo, setRascunhosPromo] = useState<Record<string, Product>>({});
   const [selecionadosOficina, setSelecionadosOficina] = useState<Set<string>>(new Set());
   const [isBulkPromoOpen, setIsBulkPromoOpen] = useState(false);
@@ -350,7 +340,16 @@ export default function PromocoesPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const payload: Record<string, any> = { company: contexto.empresa.id, page: novaPagina, searchParameters: termoAtual, recordsPerPage: 15 };
+      
+      const payload: Record<string, any> = { 
+        company: String(contexto.empresa.id), 
+        page: novaPagina, 
+        searchParameters: termoAtual, 
+        recordsPerPage: 15,
+        ordenationType: sortConfig.direction || "asc",
+        orderBy: [{ field: sortConfig.key || "description" }]
+      };
+      
       if (familiaAtual.trim() !== "") payload.family = familiaAtual.trim();
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/search`, {
@@ -594,7 +593,6 @@ export default function PromocoesPage() {
       company: String(contexto?.empresa.id || ""), 
       tablePrice: tabelaSelecionada,
       initialDate: dataInicialSplit,
-      // AQUI: Filtra apenas os produtos que estão com a checkbox marcada!
       products: produtosNoCarrinhoOrdenados
         .filter(p => selecionadosOficina.has(p.code))
         .map(p => {
@@ -654,7 +652,6 @@ export default function PromocoesPage() {
     try {
       const dataInicialSplit = (validadeSelecionada.split(" - ")[0] || "").trim();
       
-      // AQUI: Deleta SOMENTE os itens que estavam marcados, inclusive durante a efetivação
       const itensParaDeletar = Array.from(selecionadosOficina).map(code => ({ code: String(code) }));
 
       if (itensParaDeletar.length === 0) {
@@ -755,6 +752,8 @@ export default function PromocoesPage() {
     let direction: "asc" | "desc" = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
     setSortConfig({ key, direction });
+    // Na tela de promoções a busca também dispara com a nova ordenação na página 1
+    buscarProdutos(1, busca, buscaFamilia);
   }
 
   const produtosNoCarrinho = Array.from(produtosSelecionados.values());
@@ -992,7 +991,6 @@ export default function PromocoesPage() {
               <div className="p-10 text-center">
                 
                 {parametrosRascunho.length === 0 ? (
-                  // ESTADO VAZIO: NENHUM RASCUNHO PENDENTE
                   <div className="flex flex-col items-center justify-center py-6 animate-in zoom-in-95 duration-300">
                     <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-fritz-stone-50 text-fritz-stone-300 mb-6 border-2 border-dashed border-fritz-stone-200">
                       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -1004,7 +1002,6 @@ export default function PromocoesPage() {
                     </Button>
                   </div>
                 ) : (
-                  // FORMULÁRIO DE SELEÇÃO DE RASCUNHOS
                   <>
                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-fritz-stone-100 text-fritz-stone-600 mb-6">
                       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -1039,7 +1036,7 @@ export default function PromocoesPage() {
                         >
                           <option value="">Selecione o período do rascunho...</option>
                           {validadesRascunhoSelecionado.map((val, idx) => (
-                            <option key={idx} value={val.initialDate}>
+                            <option key={idx} value={`${val.initialDate} - ${val.finalDate}`}>
                               {val.initialDate} a {val.finalDate}
                             </option>
                           ))}
@@ -1253,15 +1250,19 @@ export default function PromocoesPage() {
                       const rascunho = rascunhosPromo[produtoBase.code] || { ...produtoBase };
                       const isSelecionadoOficina = selecionadosOficina.has(rascunho.code);
                       
+                      // LÓGICA DO PREÇO SIMULADO (ANTES vs DEPOIS)
+                      const precoSimuladoOriginal = calcularPrecoSimulado(produtoBase);
                       const precoSimuladoRealtime = calcularPrecoSimulado(rascunho);
+                      
+                      const isPrecoSimuladoDiferente = Math.abs(precoSimuladoRealtime - precoSimuladoOriginal) > 0.001;
                       const precoFinalPromo = rascunho.basePricePromo !== undefined ? rascunho.basePricePromo : precoSimuladoRealtime;
 
                       return (
                         <tr key={rascunho.code} className={`transition-colors ${isSelecionadoOficina ? "bg-fritz-stone-50" : "hover:bg-fritz-stone-50/60"}`}>
-                          <td className="px-4 py-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-4 py-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
                             <input type="checkbox" checked={isSelecionadoOficina} onChange={() => toggleSelecionarOficina(rascunho.code)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-stone-600 focus:ring-fritz-stone-600 cursor-pointer" />
                           </td>
-                          <td className="px-4 py-3 truncate text-fritz-stone-600 align-middle text-xs" title={`${rascunho.familyCode || ''} - ${rascunho.familyDescription || 'Sem Família'}`}>
+                          <td className="px-4 py-2 truncate text-fritz-stone-600 align-middle text-xs" title={`${rascunho.familyCode || ''} - ${rascunho.familyDescription || 'Sem Família'}`}>
                             {rascunho.familyCode && (
                               <span className="inline-flex items-center justify-center rounded bg-fritz-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-fritz-stone-500 mr-2 border border-fritz-stone-200">
                                 {rascunho.familyCode}
@@ -1269,36 +1270,57 @@ export default function PromocoesPage() {
                             )}
                             {rascunho.familyDescription || "-"}
                           </td>
-                          <td className="px-4 py-3 font-mono font-medium text-fritz-stone-800">{rascunho.code}</td>
-                          <td className="px-4 py-3 truncate font-medium text-fritz-stone-900">{rascunho.description}</td>
+                          <td className="px-4 py-2 font-mono font-medium text-fritz-stone-800 align-middle">{rascunho.code}</td>
+                          <td className="px-4 py-2 truncate font-medium text-fritz-stone-900 align-middle">{rascunho.description}</td>
                           
-                          <td className="px-4 py-3 font-medium text-right text-fritz-stone-600">
+                          <td className="px-4 py-2 font-medium text-right text-fritz-stone-600 align-middle">
                             <CelulaInteligente tipo="moeda" align="right" valor={rascunho.average} onChange={(v: number) => handleEditPromo(produtoBase, "average", v)} />
                           </td>
 
-                          <td className="px-4 py-3 text-right font-extrabold text-fritz-bright-700 bg-fritz-bright-50/30 select-none">
-                            {formatarMoeda(precoSimuladoRealtime)}
+                          {/* COLUNA: PREÇO SIMULADO (COM ANTES/DEPOIS VISUAL) */}
+                          <td className="px-4 py-1.5 text-right font-extrabold text-fritz-bright-700 bg-fritz-bright-50/30 select-none align-middle">
+                            <div className="flex flex-col items-end justify-center w-full">
+                              {isPrecoSimuladoDiferente && (
+                                <div className="flex items-center gap-1 text-[10px] text-fritz-stone-400 -mb-1 mt-1">
+                                  <span className="line-through">{formatarMoeda(precoSimuladoOriginal)}</span>
+                                  {precoSimuladoRealtime > precoSimuladoOriginal ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                  ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                  )}
+                                </div>
+                              )}
+                              <div className="w-full">
+                                {formatarMoeda(precoSimuladoRealtime)}
+                              </div>
+                            </div>
                           </td>
 
-                          <td className="px-4 py-3 font-black text-fritz-green-700 bg-fritz-green-50/20">
+                          {/* COLUNA: PREÇO FINAL PROMO (LIMPA) */}
+                          <td className="px-4 py-1.5 font-black text-fritz-green-700 bg-fritz-green-50/20 align-middle">
                             <CelulaInteligente tipo="moeda" align="right" valor={precoFinalPromo} onChange={(v: number) => handleEditPromo(produtoBase, "basePricePromo", v)} />
                           </td>
 
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIcms} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIcms", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundCofinsAndPis} onChange={(v: number) => handleEditPromo(produtoBase, "inboundCofinsAndPis", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIpi} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIpi", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundFreight} onChange={(v: number) => handleEditPromo(produtoBase, "inboundFreight", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIcms} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIcms", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundCofinsAndPis} onChange={(v: number) => handleEditPromo(produtoBase, "inboundCofinsAndPis", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIpi} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIpi", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundFreight} onChange={(v: number) => handleEditPromo(produtoBase, "inboundFreight", v)} /></td>
 
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.icms} onChange={(v: number) => handleEditPromo(produtoBase, "icms", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.ipi} onChange={(v: number) => handleEditPromo(produtoBase, "ipi", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.pis} onChange={(v: number) => handleEditPromo(produtoBase, "pis", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.cofins} onChange={(v: number) => handleEditPromo(produtoBase, "cofins", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.freight} onChange={(v: number) => handleEditPromo(produtoBase, "freight", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.icms} onChange={(v: number) => handleEditPromo(produtoBase, "icms", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.ipi} onChange={(v: number) => handleEditPromo(produtoBase, "ipi", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.pis} onChange={(v: number) => handleEditPromo(produtoBase, "pis", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.cofins} onChange={(v: number) => handleEditPromo(produtoBase, "cofins", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.freight} onChange={(v: number) => handleEditPromo(produtoBase, "freight", v)} /></td>
 
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.fixedCoast} onChange={(v: number) => handleEditPromo(produtoBase, "fixedCoast", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.internalComission} onChange={(v: number) => handleEditPromo(produtoBase, "internalComission", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.externalComission} onChange={(v: number) => handleEditPromo(produtoBase, "externalComission", v)} /></td>
-                          <td className="px-4 py-3"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.profit} onChange={(v: number) => handleEditPromo(produtoBase, "profit", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.fixedCoast} onChange={(v: number) => handleEditPromo(produtoBase, "fixedCoast", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.internalComission} onChange={(v: number) => handleEditPromo(produtoBase, "internalComission", v)} /></td>
+                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.externalComission} onChange={(v: number) => handleEditPromo(produtoBase, "externalComission", v)} /></td>
+                          
+                          {/* COLUNA: LUCRO PROMO (LIMPA) */}
+                          <td className="px-4 py-1.5 align-middle font-semibold text-fritz-stone-800">
+                            <CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.profit} onChange={(v: number) => handleEditPromo(produtoBase, "profit", v)} />
+                          </td>
+
                         </tr>
                       );
                     })}
