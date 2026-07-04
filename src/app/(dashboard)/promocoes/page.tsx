@@ -275,9 +275,15 @@ export default function PromocoesPage() {
 
   const [rascunhosPromo, setRascunhosPromo] = useState<Record<string, Product>>({});
   const [selecionadosOficina, setSelecionadosOficina] = useState<Set<string>>(new Set());
+  
+  // MODAIS E ESTADOS DA BARRA FLUTUANTE
   const [isBulkPromoOpen, setIsBulkPromoOpen] = useState(false);
   const [bulkPromoField, setBulkPromoField] = useState<keyof Product>("profit");
   const [bulkPromoValue, setBulkPromoValue] = useState<string>("");
+
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [discountType, setDiscountType] = useState<"desconto" | "acrescimo">("desconto");
+  const [discountValue, setDiscountValue] = useState<string>("");
 
   const scrollInternoRef = useRef<HTMLDivElement>(null);
   const inputBuscaRef = useRef<HTMLInputElement>(null);
@@ -345,7 +351,7 @@ export default function PromocoesPage() {
         company: String(contexto.empresa.id), 
         page: novaPagina, 
         searchParameters: termoAtual, 
-        recordsPerPage: 15,
+        recordsPerPage: 50, // <-- Alterado para exibir 50 produtos conforme pedido
         ordenationType: sortConfig.direction || "asc",
         orderBy: [{ field: sortConfig.key || "description" }]
       };
@@ -432,6 +438,7 @@ export default function PromocoesPage() {
   }
 
   function mudarPagina(novaPagina: number) {
+    if (novaPagina < 1 || novaPagina > totalPaginas) return;
     buscarProdutos(novaPagina, busca, buscaFamilia);
     if (scrollInternoRef.current) scrollInternoRef.current.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -537,6 +544,40 @@ export default function PromocoesPage() {
     setBulkPromoValue("");
     setSelecionadosOficina(new Set());
     showToast(`${selecionadosOficina.size} itens atualizados com sucesso!`, "success");
+  }
+
+  function aplicarDescontoEmMassa(e: FormEvent) {
+    e.preventDefault();
+    const valorPerc = parseFloat(discountValue);
+    if (isNaN(valorPerc) || valorPerc <= 0) return;
+
+    setRascunhosPromo(prev => {
+      const novosRascunhos = { ...prev };
+      selecionadosOficina.forEach(codigo => {
+        const produtoOriginal = produtosSelecionados.get(codigo);
+        if (produtoOriginal) {
+          const rascunhoAtual = novosRascunhos[codigo] || produtoOriginal;
+          
+          // O desconto ou acréscimo é aplicado EXATAMENTE sobre o preço simulado ativo
+          const precoBaseCalculado = calcularPrecoSimulado(rascunhoAtual);
+          
+          let novoPrecoFinal = precoBaseCalculado;
+          if (discountType === "desconto") {
+            novoPrecoFinal = precoBaseCalculado * (1 - valorPerc / 100);
+          } else {
+            novoPrecoFinal = precoBaseCalculado * (1 + valorPerc / 100);
+          }
+          
+          novosRascunhos[codigo] = { ...rascunhoAtual, basePricePromo: novoPrecoFinal };
+        }
+      });
+      return novosRascunhos;
+    });
+    
+    setIsDiscountModalOpen(false);
+    setDiscountValue("");
+    setSelecionadosOficina(new Set());
+    showToast(`Remarcação em massa aplicada a ${selecionadosOficina.size} itens!`, "success");
   }
 
   const abrirModalSetup = () => {
@@ -900,7 +941,7 @@ export default function PromocoesPage() {
               </form>
             </div>
 
-            <div className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
+            <div className="rounded-2xl border border-fritz-stone-200 bg-white shadow-sm overflow-hidden flex-1 flex flex-col min-h-0 mb-4 z-10">
               <div ref={scrollInternoRef} className="overflow-auto flex-1 relative">
                 <table className="w-full text-left text-sm text-fritz-stone-700 table-fixed min-w-max">
                   <thead className="bg-fritz-stone-100/50 text-xs font-semibold uppercase tracking-wider text-fritz-stone-500">
@@ -957,29 +998,32 @@ export default function PromocoesPage() {
                 </table>
               </div>
 
-              <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => mudarPagina(pagina - 1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    </button>
-                    <span className="text-sm font-medium text-fritz-stone-700 px-2">Página {pagina} de {totalPaginas || 1}</span>
-                    <button onClick={() => mudarPagina(pagina + 1)} disabled={pagina >= totalPaginas} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                    </button>
+              {/* RODAPÉ FIXO NA GRID DO PASSO 1 */}
+              {produtos.length > 0 && (
+                <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => mudarPagina(pagina - 1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </button>
+                      <span className="text-sm font-medium text-fritz-stone-700 px-2">Página {pagina} de {totalPaginas || 1}</span>
+                      <button onClick={() => mudarPagina(pagina + 1)} disabled={pagina >= totalPaginas} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                    </div>
+                    
+                    {quantidadeCarrinho > 0 && (
+                      <button type="button" onClick={() => setProdutosSelecionados(new Map())} className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors px-2 py-1">
+                        Limpar Seleção ({quantidadeCarrinho})
+                      </button>
+                    )}
                   </div>
-                  
-                  {quantidadeCarrinho > 0 && (
-                    <button type="button" onClick={() => setProdutosSelecionados(new Map())} className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors px-2 py-1">
-                      Limpar Seleção ({quantidadeCarrinho})
-                    </button>
-                  )}
-                </div>
 
-                <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2 rounded-xl font-semibold shadow-sm transition-all">
-                  Configurar Campanha ({quantidadeCarrinho})
-                </Button>
-              </div>
+                  <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2 rounded-xl font-semibold shadow-sm transition-all">
+                    Configurar Campanha ({quantidadeCarrinho})
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1140,15 +1184,25 @@ export default function PromocoesPage() {
         {passoAtual === 3 && (
           <div className="bg-white rounded-2xl border border-fritz-stone-200 shadow-sm p-6 flex flex-col flex-1 animate-in fade-in slide-in-from-right-8 duration-300 relative min-h-0">
             
+            {/* BARRA FLUTUANTE DE AÇÕES (COM O NOVO BOTÃO DE DESCONTO) */}
             {selecionadosOficina.size > 0 && (
               <div className="absolute top-2 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
                 <div className="bg-fritz-stone-900 text-white rounded-full px-6 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.3)] flex items-center gap-4 animate-in slide-in-from-top-4 fade-in duration-300 border border-fritz-stone-700 pointer-events-auto">
                   <span className="text-sm font-semibold">{selecionadosOficina.size} na fila de edição</span>
                   <div className="w-px h-4 bg-fritz-stone-700"></div>
+                  
                   <button onClick={() => setIsBulkPromoOpen(true)} className="text-sm font-bold text-fritz-bright-400 hover:text-fritz-bright-300 transition-colors flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
                     Aplicar em lote
                   </button>
+                  
+                  <div className="w-px h-4 bg-fritz-stone-700"></div>
+                  
+                  <button onClick={() => setIsDiscountModalOpen(true)} className="text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    Remarcação em Massa (%)
+                  </button>
+
                   <button onClick={() => setSelecionadosOficina(new Set())} className="ml-2 text-fritz-stone-400 hover:text-white transition-colors" title="Limpar seleção">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
@@ -1156,6 +1210,49 @@ export default function PromocoesPage() {
               </div>
             )}
 
+            {/* NOVO MODAL: CALCULADORA DE DESCONTO / ACRÉSCIMO */}
+            {isDiscountModalOpen && (
+              <div className="fixed inset-0 bg-fritz-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
+                <div className="bg-white rounded-3xl shadow-2xl w-[400px] overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                      </div>
+                      <h3 className="text-xl font-black text-fritz-stone-900">Remarcação Rápida</h3>
+                    </div>
+                    
+                    <p className="text-sm text-fritz-stone-500 mb-6">Aplique um percentual sobre o preço simulado dos {selecionadosOficina.size} produtos selecionados.</p>
+                    
+                    <form onSubmit={aplicarDescontoEmMassa} className="space-y-5">
+                      <div className="flex bg-fritz-stone-100 p-1 rounded-xl">
+                        <button type="button" onClick={() => setDiscountType("desconto")} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${discountType === "desconto" ? "bg-white shadow-sm text-red-600" : "text-fritz-stone-500 hover:text-fritz-stone-700"}`}>
+                          Desconto (-)
+                        </button>
+                        <button type="button" onClick={() => setDiscountType("acrescimo")} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${discountType === "acrescimo" ? "bg-white shadow-sm text-emerald-600" : "text-fritz-stone-500 hover:text-fritz-stone-700"}`}>
+                          Acréscimo (+)
+                        </button>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-fritz-stone-700 mb-1.5">Percentual (%)</label>
+                        <div className="relative">
+                          <input type="number" step="any" required value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder="Ex: 5" className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 pl-4 pr-10 py-3 text-lg font-bold text-fritz-stone-900 outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100" autoFocus />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-fritz-stone-400 font-bold">%</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 flex gap-3">
+                        <Button type="button" onClick={() => setIsDiscountModalOpen(false)} className="flex-1 bg-white border border-fritz-stone-200 text-fritz-stone-700 hover:bg-fritz-stone-50 py-3 rounded-xl font-semibold">Cancelar</Button>
+                        <Button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold">Aplicar a todos</Button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: APLICAR EM LOTE (PARÂMETROS) */}
             {isBulkPromoOpen && (
               <div className="fixed inset-0 bg-fritz-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
                 <div className="bg-white rounded-2xl shadow-xl w-[400px] overflow-hidden animate-in zoom-in-95 duration-200">
