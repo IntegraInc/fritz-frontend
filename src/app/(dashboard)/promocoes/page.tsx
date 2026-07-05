@@ -351,7 +351,7 @@ export default function PromocoesPage() {
         company: String(contexto.empresa.id), 
         page: novaPagina, 
         searchParameters: termoAtual, 
-        recordsPerPage: 50, // <-- Alterado para exibir 50 produtos conforme pedido
+        recordsPerPage: 50,
         ordenationType: sortConfig.direction || "asc",
         orderBy: [{ field: sortConfig.key || "description" }]
       };
@@ -557,8 +557,6 @@ export default function PromocoesPage() {
         const produtoOriginal = produtosSelecionados.get(codigo);
         if (produtoOriginal) {
           const rascunhoAtual = novosRascunhos[codigo] || produtoOriginal;
-          
-          // O desconto ou acréscimo é aplicado EXATAMENTE sobre o preço simulado ativo
           const precoBaseCalculado = calcularPrecoSimulado(rascunhoAtual);
           
           let novoPrecoFinal = precoBaseCalculado;
@@ -578,6 +576,23 @@ export default function PromocoesPage() {
     setDiscountValue("");
     setSelecionadosOficina(new Set());
     showToast(`Remarcação em massa aplicada a ${selecionadosOficina.size} itens!`, "success");
+  }
+
+  // --- NOVA FUNÇÃO GOLD MASTER: SINCRONIZAR EM LOTE ---
+  function sincronizarPrecosSimulados() {
+    setRascunhosPromo(prev => {
+      const novosRascunhos = { ...prev };
+      selecionadosOficina.forEach(codigo => {
+        const produtoOriginal = produtosSelecionados.get(codigo);
+        if (produtoOriginal) {
+          const rascunhoAtual = novosRascunhos[codigo] || produtoOriginal;
+          const precoSimulado = calcularPrecoSimulado(rascunhoAtual);
+          novosRascunhos[codigo] = { ...rascunhoAtual, basePricePromo: precoSimulado };
+        }
+      });
+      return novosRascunhos;
+    });
+    showToast(`Preços sincronizados em ${selecionadosOficina.size} produtos!`, "success");
   }
 
   const abrirModalSetup = () => {
@@ -1184,7 +1199,7 @@ export default function PromocoesPage() {
         {passoAtual === 3 && (
           <div className="bg-white rounded-2xl border border-fritz-stone-200 shadow-sm p-6 flex flex-col flex-1 animate-in fade-in slide-in-from-right-8 duration-300 relative min-h-0">
             
-            {/* BARRA FLUTUANTE DE AÇÕES (COM O NOVO BOTÃO DE DESCONTO) */}
+            {/* BARRA FLUTUANTE DE AÇÕES */}
             {selecionadosOficina.size > 0 && (
               <div className="absolute top-2 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
                 <div className="bg-fritz-stone-900 text-white rounded-full px-6 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.3)] flex items-center gap-4 animate-in slide-in-from-top-4 fade-in duration-300 border border-fritz-stone-700 pointer-events-auto">
@@ -1200,7 +1215,15 @@ export default function PromocoesPage() {
                   
                   <button onClick={() => setIsDiscountModalOpen(true)} className="text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                    Remarcação em Massa (%)
+                    Remarcação (%)
+                  </button>
+
+                  <div className="w-px h-4 bg-fritz-stone-700"></div>
+
+                  {/* AÇÃO MACRO (EM LOTE) DE SINCRONIZAÇÃO */}
+                  <button onClick={sincronizarPrecosSimulados} className="text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2" title="Igualar o preço final ao preço simulado em todos os itens marcados">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"></path><path d="m14 7 3 3"></path><path d="M5 6v4"></path><path d="M19 14v4"></path><path d="M10 2v2"></path><path d="M7 8H3"></path><path d="M21 16h-4"></path><path d="M11 3H9"></path></svg>
+                    Sincronizar Simulado
                   </button>
 
                   <button onClick={() => setSelecionadosOficina(new Set())} className="ml-2 text-fritz-stone-400 hover:text-white transition-colors" title="Limpar seleção">
@@ -1374,11 +1397,21 @@ export default function PromocoesPage() {
                             <CelulaInteligente tipo="moeda" align="right" valor={rascunho.average} onChange={(v: number) => handleEditPromo(produtoBase, "average", v)} />
                           </td>
 
-                          {/* COLUNA: PREÇO SIMULADO (COM ANTES/DEPOIS VISUAL) */}
-                          <td className="px-4 py-1.5 text-right font-extrabold text-fritz-bright-700 bg-fritz-bright-50/30 select-none align-middle">
-                            <div className="flex flex-col items-end justify-center w-full">
+                          {/* COLUNA: PREÇO SIMULADO (COM AÇÃO MICRO/HOVER) */}
+                          <td className="px-4 py-1.5 text-right font-extrabold text-fritz-bright-700 bg-fritz-bright-50/30 select-none align-middle group relative">
+                            
+                            {/* AÇÃO MICRO (LINHA A LINHA): Botão "Copiar para o Preço Final" */}
+                            <button
+                              onClick={() => handleEditPromo(produtoBase, "basePricePromo", precoSimuladoRealtime)}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded shadow-md border border-fritz-bright-200 text-fritz-bright-700 hover:bg-fritz-bright-700 hover:text-white z-10 scale-90 hover:scale-100"
+                              title="Copiar para Preço Final"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                            </button>
+
+                            <div className="flex flex-col items-end justify-center w-full transition-transform group-hover:translate-x-2">
                               {isPrecoSimuladoDiferente && (
-                                <div className="flex items-center gap-1 text-[10px] text-fritz-stone-400 -mb-1 mt-1">
+                                <div className="flex items-center gap-1 text-[10px] text-fritz-stone-400 -mb-1 mt-1 pr-1">
                                   <span className="line-through">{formatarMoeda(precoSimuladoOriginal)}</span>
                                   {precoSimuladoRealtime > precoSimuladoOriginal ? (
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
@@ -1387,13 +1420,13 @@ export default function PromocoesPage() {
                                   )}
                                 </div>
                               )}
-                              <div className="w-full">
+                              <div className="w-full pr-1">
                                 {formatarMoeda(precoSimuladoRealtime)}
                               </div>
                             </div>
                           </td>
 
-                          {/* COLUNA: PREÇO FINAL PROMO (LIMPA) */}
+                          {/* COLUNA: PREÇO FINAL PROMO */}
                           <td className="px-4 py-1.5 font-black text-fritz-green-700 bg-fritz-green-50/20 align-middle">
                             <CelulaInteligente tipo="moeda" align="right" valor={precoFinalPromo} onChange={(v: number) => handleEditPromo(produtoBase, "basePricePromo", v)} />
                           </td>
@@ -1413,7 +1446,7 @@ export default function PromocoesPage() {
                           <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.internalComission} onChange={(v: number) => handleEditPromo(produtoBase, "internalComission", v)} /></td>
                           <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.externalComission} onChange={(v: number) => handleEditPromo(produtoBase, "externalComission", v)} /></td>
                           
-                          {/* COLUNA: LUCRO PROMO (LIMPA) */}
+                          {/* COLUNA: LUCRO PROMO */}
                           <td className="px-4 py-1.5 align-middle font-semibold text-fritz-stone-800">
                             <CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.profit} onChange={(v: number) => handleEditPromo(produtoBase, "profit", v)} />
                           </td>
