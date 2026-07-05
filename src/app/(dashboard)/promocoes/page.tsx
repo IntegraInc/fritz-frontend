@@ -49,6 +49,7 @@ type ThOrdenavelProps = {
   larguraInicial?: string;
   sortConfig?: SortConfig;
   align?: "left" | "right" | "center";
+  highlightClass?: string;
   onSort?: (key: keyof Product) => void;
   children?: React.ReactNode;
 };
@@ -84,7 +85,7 @@ const StepperVisual = ({ passoAtual }: { passoAtual: number }) => (
   </div>
 );
 
-const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, align = "left", onSort, children }: ThOrdenavelProps) => {
+const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, align = "left", highlightClass, onSort, children }: ThOrdenavelProps) => {
   const isSorted = sortKey && sortConfig?.key === sortKey;
   const thRef = useRef<HTMLTableCellElement>(null);
   const storageKey = `fritz_coluna_promo_${String(sortKey || label)}`;
@@ -119,17 +120,17 @@ const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, 
   };
 
   return (
-    <th id={id} ref={thRef} style={{ width: largura, minWidth: largura, maxWidth: largura }} className="sticky top-0 z-20 bg-fritz-stone-100 shadow-[0_1px_0_0_#e5e7eb] group border-r border-transparent hover:border-fritz-stone-200 transition-colors p-0 align-middle">
+    <th id={id} ref={thRef} style={{ width: largura, minWidth: largura, maxWidth: largura }} className={`sticky top-0 z-20 shadow-[0_1px_0_0_#e5e7eb] group transition-colors p-0 align-middle ${highlightClass || 'bg-fritz-stone-100 border-r border-transparent hover:border-fritz-stone-200'}`}>
       <div onClick={() => sortKey && onSort && onSort(sortKey)} className={`flex items-center gap-2 px-4 py-3 ${sortKey ? 'cursor-pointer hover:bg-fritz-stone-200/50' : ''} select-none w-full h-full ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""}`}>
         {children || <span className="truncate">{label}</span>}
         {sortKey && (
           <div className="flex flex-col shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`${isSorted && sortConfig.direction === 'asc' ? 'text-fritz-bright-700' : 'text-fritz-stone-400 opacity-50'}`}><polyline points="18 15 12 9 6 15"></polyline></svg>
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`-mt-[2px] ${isSorted && sortConfig.direction === 'desc' ? 'text-fritz-bright-700' : 'text-fritz-stone-400 opacity-50'}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`${isSorted && sortConfig.direction === 'asc' ? 'text-current' : 'text-current opacity-30'}`}><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`-mt-[2px] ${isSorted && sortConfig.direction === 'desc' ? 'text-current' : 'text-current opacity-30'}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
           </div>
         )}
       </div>
-      <div onMouseDown={iniciarRedimensionamento} onClick={(e) => e.stopPropagation()} className="absolute right-0 top-0 h-full w-[6px] cursor-col-resize bg-transparent group-hover:bg-fritz-stone-300 hover:!bg-fritz-bright-600 z-10 transform translate-x-1/2 transition-colors" title="Arraste para redimensionar" />
+      <div onMouseDown={iniciarRedimensionamento} onClick={(e) => e.stopPropagation()} className="absolute right-0 top-0 h-full w-[6px] cursor-col-resize bg-transparent group-hover:bg-fritz-stone-400/50 hover:!bg-fritz-stone-600 z-10 transform translate-x-1/2 transition-colors" title="Arraste para redimensionar" />
     </th>
   );
 };
@@ -172,7 +173,7 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
       tabIndex={0}
       onFocus={() => setEditando(true)}
       onClick={() => setEditando(true)} 
-      className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white focus:bg-white focus:ring-2 focus:ring-fritz-bright-600 focus:outline-none rounded px-2 py-1 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
+      className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white focus:bg-white focus:ring-2 focus:ring-fritz-bright-600 focus:outline-none rounded px-2 py-1 -mx-2 text-sm text-current transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
     >
       {exibicao}
     </div>
@@ -578,7 +579,6 @@ export default function PromocoesPage() {
     showToast(`Remarcação em massa aplicada a ${selecionadosOficina.size} itens!`, "success");
   }
 
-  // --- NOVA FUNÇÃO GOLD MASTER: SINCRONIZAR EM LOTE ---
   function sincronizarPrecosSimulados() {
     setRascunhosPromo(prev => {
       const novosRascunhos = { ...prev };
@@ -808,7 +808,6 @@ export default function PromocoesPage() {
     let direction: "asc" | "desc" = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
     setSortConfig({ key, direction });
-    // Na tela de promoções a busca também dispara com a nova ordenação na página 1
     buscarProdutos(1, busca, buscaFamilia);
   }
 
@@ -1220,7 +1219,6 @@ export default function PromocoesPage() {
 
                   <div className="w-px h-4 bg-fritz-stone-700"></div>
 
-                  {/* AÇÃO MACRO (EM LOTE) DE SINCRONIZAÇÃO */}
                   <button onClick={sincronizarPrecosSimulados} className="text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-2" title="Igualar o preço final ao preço simulado em todos os itens marcados">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"></path><path d="m14 7 3 3"></path><path d="M5 6v4"></path><path d="M19 14v4"></path><path d="M10 2v2"></path><path d="M7 8H3"></path><path d="M21 16h-4"></path><path d="M11 3H9"></path></svg>
                     Sincronizar Simulado
@@ -1233,7 +1231,7 @@ export default function PromocoesPage() {
               </div>
             )}
 
-            {/* NOVO MODAL: CALCULADORA DE DESCONTO / ACRÉSCIMO */}
+            {/* MODAL: CALCULADORA DE DESCONTO / ACRÉSCIMO */}
             {isDiscountModalOpen && (
               <div className="fixed inset-0 bg-fritz-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
                 <div className="bg-white rounded-3xl shadow-2xl w-[400px] overflow-hidden animate-in zoom-in-95 duration-200">
@@ -1339,15 +1337,26 @@ export default function PromocoesPage() {
                       <ThOrdenavel label="Código" sortKey="code" larguraInicial="110px" sortConfig={sortConfig} onSort={handleSort} />
                       <ThOrdenavel label="Descrição" sortKey="description" larguraInicial="300px" sortConfig={sortConfig} onSort={handleSort} />
                       
-                      <ThOrdenavel label="Custo Médio" sortKey="average" larguraInicial="130px" align="right" />
-                      
-                      <ThOrdenavel label="PREÇO SIMULADO" larguraInicial="160px" align="right">
-                        <span className="text-fritz-bright-700 font-extrabold tracking-tight">PREÇO SIMULADO</span>
+                      {/* BLOCO DE PREÇOS REFINADO (SEM BORDAS ESCURAS) */}
+                      <ThOrdenavel 
+                        label="PREÇO SIMULADO" 
+                        larguraInicial="160px" 
+                        align="right" 
+                        highlightClass="bg-fritz-bright-50/50"
+                      >
+                        <span className="text-fritz-bright-800 font-extrabold tracking-tight">PREÇO SIMULADO</span>
                       </ThOrdenavel>
-                      <ThOrdenavel label="PREÇO FINAL PROMO" larguraInicial="180px" align="right">
-                        <span className="text-fritz-green-700 font-extrabold tracking-tight">PREÇO FINAL PROMO</span>
+                      <ThOrdenavel 
+                        label="PREÇO FINAL PROMO" 
+                        larguraInicial="180px" 
+                        align="right" 
+                        highlightClass="bg-fritz-green-50/50"
+                      >
+                        <span className="text-fritz-green-800 font-extrabold tracking-tight">PREÇO FINAL PROMO</span>
                       </ThOrdenavel>
 
+                      <ThOrdenavel label="Custo Médio" sortKey="average" larguraInicial="130px" align="right" />
+                      
                       <ThOrdenavel label="ICMS-(E)" sortKey="inboundIcms" larguraInicial="100px" align="right" />
                       <ThOrdenavel label="PIS/COF-(E)" sortKey="inboundCofinsAndPis" larguraInicial="110px" align="right" />
                       <ThOrdenavel label="IPI-(E)" sortKey="inboundIpi" larguraInicial="100px" align="right" />
@@ -1393,12 +1402,8 @@ export default function PromocoesPage() {
                           <td className="px-4 py-2 font-mono font-medium text-fritz-stone-800 align-middle">{rascunho.code}</td>
                           <td className="px-4 py-2 truncate font-medium text-fritz-stone-900 align-middle">{rascunho.description}</td>
                           
-                          <td className="px-4 py-2 font-medium text-right text-fritz-stone-600 align-middle">
-                            <CelulaInteligente tipo="moeda" align="right" valor={rascunho.average} onChange={(v: number) => handleEditPromo(produtoBase, "average", v)} />
-                          </td>
-
-                          {/* COLUNA: PREÇO SIMULADO (COM AÇÃO MICRO/HOVER) */}
-                          <td className="px-4 py-1.5 text-right font-extrabold text-fritz-bright-700 bg-fritz-bright-50/30 select-none align-middle group relative">
+                          {/* BLOCO DE PREÇOS REFINADO */}
+                          <td className="px-4 py-1.5 text-right font-extrabold text-fritz-bright-800 bg-fritz-bright-50/30 select-none align-middle group relative">
                             
                             {/* AÇÃO MICRO (LINHA A LINHA): Botão "Copiar para o Preço Final" */}
                             <button
@@ -1426,9 +1431,12 @@ export default function PromocoesPage() {
                             </div>
                           </td>
 
-                          {/* COLUNA: PREÇO FINAL PROMO */}
-                          <td className="px-4 py-1.5 font-black text-fritz-green-700 bg-fritz-green-50/20 align-middle">
+                          <td className="px-4 py-1.5 font-black text-fritz-green-800 bg-fritz-green-50/30 align-middle">
                             <CelulaInteligente tipo="moeda" align="right" valor={precoFinalPromo} onChange={(v: number) => handleEditPromo(produtoBase, "basePricePromo", v)} />
+                          </td>
+
+                          <td className="px-4 py-2 font-medium text-right text-fritz-stone-600 align-middle">
+                            <CelulaInteligente tipo="moeda" align="right" valor={rascunho.average} onChange={(v: number) => handleEditPromo(produtoBase, "average", v)} />
                           </td>
 
                           <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIcms} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIcms", v)} /></td>
@@ -1446,7 +1454,6 @@ export default function PromocoesPage() {
                           <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.internalComission} onChange={(v: number) => handleEditPromo(produtoBase, "internalComission", v)} /></td>
                           <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.externalComission} onChange={(v: number) => handleEditPromo(produtoBase, "externalComission", v)} /></td>
                           
-                          {/* COLUNA: LUCRO PROMO */}
                           <td className="px-4 py-1.5 align-middle font-semibold text-fritz-stone-800">
                             <CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.profit} onChange={(v: number) => handleEditPromo(produtoBase, "profit", v)} />
                           </td>
