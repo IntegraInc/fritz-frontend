@@ -47,10 +47,11 @@ type ThOrdenavelProps = {
   label: string;
   sortKey?: keyof Product;
   larguraInicial?: string;
-  sortConfig?: SortConfig;
+  orderBy?: string[];
+  ordenationType?: "asc" | "desc";
   align?: "left" | "right" | "center";
   highlightClass?: string;
-  onSort?: (key: keyof Product) => void;
+  onSort?: (key: keyof Product, e: React.MouseEvent) => void;
   children?: React.ReactNode;
 };
 
@@ -85,8 +86,9 @@ const StepperVisual = ({ passoAtual }: { passoAtual: number }) => (
   </div>
 );
 
-const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, align = "left", highlightClass, onSort, children }: ThOrdenavelProps) => {
-  const isSorted = sortKey && sortConfig?.key === sortKey;
+const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", orderBy = [], ordenationType = "asc", align = "left", highlightClass, onSort, children }: ThOrdenavelProps) => {
+  const isSorted = sortKey && orderBy.includes(sortKey);
+  const sortIndex = sortKey ? orderBy.indexOf(sortKey) : -1;
   const thRef = useRef<HTMLTableCellElement>(null);
   const storageKey = `fritz_coluna_promo_${String(sortKey || label)}`;
   
@@ -102,16 +104,19 @@ const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, 
     const startX = e.pageX;
     const startWidth = thRef.current?.getBoundingClientRect().width || 0;
     
+    let larguraFinal = largura;
+
     const aoMoverMouse = (moveEvent: MouseEvent) => {
       const novaLargura = Math.max(40, startWidth + (moveEvent.pageX - startX));
-      setLargura(`${novaLargura}px`);
+      larguraFinal = `${novaLargura}px`;
+      setLargura(larguraFinal);
     };
 
     const aoSoltarMouse = () => {
       document.removeEventListener("mousemove", aoMoverMouse);
       document.removeEventListener("mouseup", aoSoltarMouse);
       document.body.style.userSelect = "auto";
-      localStorage.setItem(storageKey, `${thRef.current?.offsetWidth}px`);
+      localStorage.setItem(storageKey, larguraFinal);
     };
 
     document.body.style.userSelect = "none";
@@ -121,16 +126,23 @@ const ThOrdenavel = ({ id, label, sortKey, larguraInicial = "auto", sortConfig, 
 
   return (
     <th id={id} ref={thRef} style={{ width: largura, minWidth: largura, maxWidth: largura }} className={`sticky top-0 z-20 shadow-[0_1px_0_0_#e5e7eb] group transition-colors p-0 align-middle ${highlightClass || 'bg-fritz-stone-100 border-r border-transparent hover:border-fritz-stone-200'}`}>
-      <div onClick={() => sortKey && onSort && onSort(sortKey)} className={`flex items-center gap-2 px-4 py-3 ${sortKey ? 'cursor-pointer hover:bg-fritz-stone-200/50' : ''} select-none w-full h-full ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""}`}>
+      <div onClick={(e) => sortKey && onSort && onSort(sortKey, e)} className={`flex items-center gap-2 px-4 py-3 ${sortKey ? 'cursor-pointer hover:bg-black/5' : ''} select-none w-full h-full ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : ""}`} title={sortKey ? "Clique para ordenar. Shift+Clique para ordenação múltipla." : undefined}>
         {children || <span className="truncate">{label}</span>}
+        
+        {isSorted && orderBy.length > 1 && (
+          <span className="flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-full bg-fritz-bright-700 text-[9px] font-bold text-white shadow-sm ml-1" title={`Prioridade de ordenação: ${sortIndex + 1}`}>
+            {sortIndex + 1}
+          </span>
+        )}
+
         {sortKey && (
           <div className="flex flex-col shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`${isSorted && sortConfig.direction === 'asc' ? 'text-current' : 'text-current opacity-30'}`}><polyline points="18 15 12 9 6 15"></polyline></svg>
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`-mt-[2px] ${isSorted && sortConfig.direction === 'desc' ? 'text-current' : 'text-current opacity-30'}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`${isSorted && ordenationType === 'asc' ? 'text-current' : 'text-current opacity-30'}`}><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`-mt-[2px] ${isSorted && ordenationType === 'desc' ? 'text-current' : 'text-current opacity-30'}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
           </div>
         )}
       </div>
-      <div onMouseDown={iniciarRedimensionamento} onClick={(e) => e.stopPropagation()} className="absolute right-0 top-0 h-full w-[6px] cursor-col-resize bg-transparent group-hover:bg-fritz-stone-400/50 hover:!bg-fritz-stone-600 z-10 transform translate-x-1/2 transition-colors" title="Arraste para redimensionar" />
+      <div onMouseDown={iniciarRedimensionamento} onClick={(e) => e.stopPropagation()} className="absolute right-0 top-0 h-full w-[6px] cursor-col-resize bg-transparent group-hover:bg-black/20 hover:!bg-black/40 z-10 transform translate-x-1/2 transition-colors" title="Arraste para redimensionar" />
     </th>
   );
 };
@@ -173,7 +185,7 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
       tabIndex={0}
       onFocus={() => setEditando(true)}
       onClick={() => setEditando(true)} 
-      className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white focus:bg-white focus:ring-2 focus:ring-fritz-bright-600 focus:outline-none rounded px-2 py-1 -mx-2 text-sm text-current transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
+      className={`cursor-text border border-transparent hover:border-black/10 hover:bg-white focus:bg-white focus:ring-2 focus:ring-fritz-bright-600 focus:outline-none rounded px-2 py-1 -mx-2 text-sm text-current transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
     >
       {exibicao}
     </div>
@@ -270,7 +282,10 @@ export default function PromocoesPage() {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalRegistros, setTotalRegistros] = useState(0);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: "asc" });
+  
+  // ESTADOS DE ORDENAÇÃO MÚLTIPLA E GLOBAL (TPV Pattern)
+  const [orderBy, setOrderBy] = useState<string[]>(["description"]);
+  const [ordenationType, setOrdenationType] = useState<"asc" | "desc">("asc");
 
   const [produtosSelecionados, setProdutosSelecionados] = useState<Map<string, Product>>(new Map());
 
@@ -342,19 +357,30 @@ export default function PromocoesPage() {
     }
   }, [contexto, autorizado]);
 
-  async function buscarProdutos(novaPagina = 1, termoAtual = busca, familiaAtual = buscaFamilia) {
+  async function buscarProdutos(
+    novaPagina = 1, 
+    termoAtual = busca, 
+    familiaAtual = buscaFamilia, 
+    novosCamposOrd?: string[], 
+    novaDirecaoOrd?: "asc" | "desc"
+  ) {
     if (!contexto) return;
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
       
+      const currentOrderBy = novosCamposOrd || orderBy;
+      const finalOrderBy = currentOrderBy.length > 0 
+        ? currentOrderBy.map(field => ({ field })) 
+        : [{ field: "description" }];
+
       const payload: Record<string, any> = { 
         company: String(contexto.empresa.id), 
         page: novaPagina, 
         searchParameters: termoAtual, 
         recordsPerPage: 50,
-        ordenationType: sortConfig.direction || "asc",
-        orderBy: [{ field: sortConfig.key || "description" }]
+        ordenationType: novaDirecaoOrd || ordenationType,
+        orderBy: finalOrderBy
       };
       
       if (familiaAtual.trim() !== "") payload.family = familiaAtual.trim();
@@ -469,9 +495,8 @@ export default function PromocoesPage() {
   }, [busca, buscaFamilia, contexto, loadingContexto, autorizado, modoTela]);
 
   function calcularPrecoSimulado(p: Product) {
-    let precoMedio = (p.inboundInvoicePrice && p.inboundInvoicePrice > 0) 
-      ? p.inboundInvoicePrice 
-      : (p.average || 0);
+    // Forçando a utilização do Valor Última Entrada do Produto (E075PRO.USU_VlrUep / lastInboundPrice)
+    let precoMedio = p.lastInboundPrice || 0;
     
     const pctIcmEnt = p.inboundIcms || 0;
     const pctPccEnt = p.inboundCofinsAndPis || 0;
@@ -804,22 +829,58 @@ export default function PromocoesPage() {
     setModoTela("NOVA");
   }
 
-  function handleSort(key: keyof Product) {
-    let direction: "asc" | "desc" = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
-    setSortConfig({ key, direction });
-    buscarProdutos(1, busca, buscaFamilia);
+  // --- FUNÇÃO DE ORDENAÇÃO MÚLTIPLA TPV ---
+  function handleSort(key: keyof Product, e: React.MouseEvent) {
+    let newOrderBy = [...orderBy];
+    let newDirection = ordenationType;
+
+    if (e.shiftKey) {
+      if (newOrderBy.includes(key)) {
+        newOrderBy = newOrderBy.filter((k) => k !== key); 
+      } else {
+        newOrderBy.push(key); 
+      }
+    } else {
+      if (newOrderBy.length === 1 && newOrderBy[0] === key) {
+        newDirection = ordenationType === "asc" ? "desc" : "asc";
+      } else {
+        newOrderBy = [key];
+        newDirection = "asc";
+      }
+    }
+
+    setOrderBy(newOrderBy);
+    setOrdenationType(newDirection);
+    
+    if (passoAtual === 1) {
+      buscarProdutos(1, busca, buscaFamilia, newOrderBy, newDirection);
+    }
+  }
+
+  function limparOrdenacao() {
+    const defaultOrderBy = ["description"];
+    setOrderBy(defaultOrderBy);
+    setOrdenationType("asc");
+    if (passoAtual === 1) {
+      buscarProdutos(1, busca, buscaFamilia, defaultOrderBy, "asc");
+    }
   }
 
   const produtosNoCarrinho = Array.from(produtosSelecionados.values());
   const produtosNoCarrinhoOrdenados = produtosNoCarrinho.sort((a, b) => {
-    const key = sortConfig.key; if (!key) return 0;
-    const valA = rascunhosPromo[a.code]?.[key] ?? a[key];
-    const valB = rascunhosPromo[b.code]?.[key] ?? b[key];
-    if (valA === null || valA === undefined) return 1;
-    if (valB === null || valB === undefined) return -1;
-    if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-    return sortConfig.direction === "asc" ? 1 : -1;
+    if (orderBy.length === 0) return 0;
+    for (const key of orderBy) {
+      const valA = rascunhosPromo[a.code]?.[key as keyof Product] ?? a[key as keyof Product];
+      const valB = rascunhosPromo[b.code]?.[key as keyof Product] ?? b[key as keyof Product];
+      
+      if (valA === valB) continue;
+      if (valA === null || valA === undefined) return 1;
+      if (valB === null || valB === undefined) return -1;
+      
+      if (valA < valB) return ordenationType === "asc" ? -1 : 1;
+      if (valA > valB) return ordenationType === "asc" ? 1 : -1;
+    }
+    return 0;
   });
 
   const todosDoCarrinhoSelecionados = produtos.length > 0 && produtos.every(p => produtosSelecionados.has(p.code));
@@ -929,6 +990,17 @@ export default function PromocoesPage() {
 
         {passoAtual === 1 && modoTela === 'NOVA' && (
           <div className="flex flex-col flex-1 min-h-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            
+            {orderBy.length > 1 && (
+              <div className="mb-3 flex items-center gap-3 bg-fritz-bright-50/80 border border-fritz-bright-200 text-fritz-bright-800 px-5 py-3 rounded-xl text-sm animate-in fade-in slide-in-from-top-2 shadow-sm shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-fritz-bright-600"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+                <span><strong>Ordenação Múltipla Ativa:</strong> A tabela está cruzando e ordenando dados de {orderBy.length} colunas simultaneamente.</span>
+                <button onClick={limparOrdenacao} className="ml-auto text-xs font-bold text-fritz-bright-700 hover:text-fritz-bright-900 underline transition-colors px-2 py-1">
+                  Restaurar Padrão
+                </button>
+              </div>
+            )}
+
             <div className="mb-3 rounded-2xl bg-white p-3 shadow-sm border border-fritz-stone-200 shrink-0">
               <form onSubmit={(e) => { e.preventDefault(); buscarProdutos(1, busca, buscaFamilia); }} className="grid grid-cols-1 md:grid-cols-12 gap-3">
                 <div className="relative md:col-span-3 z-30">
@@ -965,11 +1037,12 @@ export default function PromocoesPage() {
                           <input type="checkbox" checked={todosDoCarrinhoSelecionados} onChange={toggleSelecionarTodosCarrinho} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-bright-600 focus:ring-fritz-bright-600 cursor-pointer" />
                         </div>
                       </ThOrdenavel>
-                      <ThOrdenavel label="Família" larguraInicial="200px" />
-                      <ThOrdenavel label="Código" larguraInicial="140px" />
-                      <ThOrdenavel label="Descrição do Produto" larguraInicial="400px" />
-                      <ThOrdenavel label="Custo Médio" larguraInicial="140px" align="right" />
-                      <ThOrdenavel label="Preço Base Atual" larguraInicial="180px" align="right" />
+                      <ThOrdenavel label="Família" sortKey="familyDescription" larguraInicial="200px" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Código" sortKey="code" larguraInicial="140px" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Descrição do Produto" sortKey="description" larguraInicial="400px" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      
+                      <ThOrdenavel label="Custo Base (VlrUep)" sortKey="lastInboundPrice" larguraInicial="160px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Preço Base Atual" sortKey="basePrice" larguraInicial="180px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-fritz-stone-100 bg-white relative z-0">
@@ -986,7 +1059,15 @@ export default function PromocoesPage() {
                       ))
                     ) : produtos.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-10 text-center text-fritz-stone-400">Nenhum item localizado na busca.</td>
+                        <td colSpan={6} className="px-6 py-20 text-center">
+                          <div className="mx-auto flex max-w-sm flex-col items-center">
+                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-fritz-stone-50 text-fritz-stone-400">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            </div>
+                            <h3 className="mb-1 text-lg font-bold text-fritz-stone-900">Nenhum produto encontrado</h3>
+                            <p className="text-sm text-fritz-stone-500 mt-1">Tente ajustar os filtros ou os termos da busca para encontrar o que precisa.</p>
+                          </div>
+                        </td>
                       </tr>
                     ) : (
                       produtos.map((produto) => {
@@ -1002,7 +1083,7 @@ export default function PromocoesPage() {
                             </td>
                             <td className="px-4 py-3 truncate align-middle font-medium">{produto.code}</td>
                             <td className="px-4 py-3 align-middle truncate">{produto.description}</td>
-                            <td className="px-4 py-3 align-middle font-medium text-fritz-stone-600 text-right">{formatarMoeda(produto.average)}</td>
+                            <td className="px-4 py-3 align-middle font-medium text-fritz-stone-600 text-right">{formatarMoeda(produto.lastInboundPrice)}</td>
                             <td className="px-4 py-3 align-middle font-bold text-fritz-stone-800 text-right">{formatarMoeda(produto.basePrice)}</td>
                           </tr>
                         );
@@ -1014,18 +1095,11 @@ export default function PromocoesPage() {
 
               {/* RODAPÉ FIXO NA GRID DO PASSO 1 */}
               {produtos.length > 0 && (
-                <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0">
+                <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0 gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => mudarPagina(pagina - 1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                      </button>
-                      <span className="text-sm font-medium text-fritz-stone-700 px-2">Página {pagina} de {totalPaginas || 1}</span>
-                      <button onClick={() => mudarPagina(pagina + 1)} disabled={pagina >= totalPaginas} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                      </button>
+                    <div className="text-sm text-fritz-stone-500 hidden md:block">
+                      Mostrando <span className="font-semibold text-fritz-stone-900">{produtos.length}</span> de <span className="font-semibold text-fritz-stone-900">{totalRegistros}</span> resultados
                     </div>
-                    
                     {quantidadeCarrinho > 0 && (
                       <button type="button" onClick={() => setProdutosSelecionados(new Map())} className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors px-2 py-1">
                         Limpar Seleção ({quantidadeCarrinho})
@@ -1033,7 +1107,23 @@ export default function PromocoesPage() {
                     )}
                   </div>
 
-                  <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2 rounded-xl font-semibold shadow-sm transition-all">
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => mudarPagina(1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Primeira Página">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+                    </button>
+                    <button onClick={() => mudarPagina(pagina - 1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Página Anterior">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <span className="text-sm font-medium text-fritz-stone-700 px-3 whitespace-nowrap">Página {pagina} de {totalPaginas || 1}</span>
+                    <button onClick={() => mudarPagina(pagina + 1)} disabled={pagina >= totalPaginas} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Próxima Página">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                    <button onClick={() => mudarPagina(totalPaginas)} disabled={pagina >= totalPaginas || totalPaginas === 0} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Última Página">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+                    </button>
+                  </div>
+
+                  <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2 rounded-xl font-semibold shadow-sm transition-all whitespace-nowrap">
                     Configurar Campanha ({quantidadeCarrinho})
                   </Button>
                 </div>
@@ -1198,7 +1288,16 @@ export default function PromocoesPage() {
         {passoAtual === 3 && (
           <div className="bg-white rounded-2xl border border-fritz-stone-200 shadow-sm p-6 flex flex-col flex-1 animate-in fade-in slide-in-from-right-8 duration-300 relative min-h-0">
             
-            {/* BARRA FLUTUANTE DE AÇÕES */}
+            {orderBy.length > 1 && (
+              <div className="mb-3 flex items-center gap-3 bg-fritz-bright-50/80 border border-fritz-bright-200 text-fritz-bright-800 px-5 py-3 rounded-xl text-sm animate-in fade-in slide-in-from-top-2 shadow-sm shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-fritz-bright-600"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
+                <span><strong>Ordenação Múltipla Ativa:</strong> A tabela está cruzando e ordenando dados de {orderBy.length} colunas simultaneamente.</span>
+                <button onClick={limparOrdenacao} className="ml-auto text-xs font-bold text-fritz-bright-700 hover:text-fritz-bright-900 underline transition-colors px-2 py-1">
+                  Restaurar Padrão
+                </button>
+              </div>
+            )}
+
             {selecionadosOficina.size > 0 && (
               <div className="absolute top-2 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
                 <div className="bg-fritz-stone-900 text-white rounded-full px-6 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.3)] flex items-center gap-4 animate-in slide-in-from-top-4 fade-in duration-300 border border-fritz-stone-700 pointer-events-auto">
@@ -1333,11 +1432,11 @@ export default function PromocoesPage() {
                           <input type="checkbox" checked={todosDaOficinaSelecionados} onChange={toggleSelecionarTodosOficina} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-stone-600 focus:ring-fritz-stone-600 cursor-pointer" />
                         </div>
                       </ThOrdenavel>
-                      <ThOrdenavel label="Família" sortKey="familyDescription" larguraInicial="200px" sortConfig={sortConfig} onSort={handleSort} />
-                      <ThOrdenavel label="Código" sortKey="code" larguraInicial="110px" sortConfig={sortConfig} onSort={handleSort} />
-                      <ThOrdenavel label="Descrição" sortKey="description" larguraInicial="300px" sortConfig={sortConfig} onSort={handleSort} />
+                      <ThOrdenavel label="Família" sortKey="familyDescription" larguraInicial="200px" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Código" sortKey="code" larguraInicial="110px" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Descrição" sortKey="description" larguraInicial="300px" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                       
-                      {/* BLOCO DE PREÇOS REFINADO (SEM BORDAS ESCURAS) */}
+                      {/* BLOCO DE PREÇOS REFINADO */}
                       <ThOrdenavel 
                         label="PREÇO SIMULADO" 
                         larguraInicial="160px" 
@@ -1355,112 +1454,125 @@ export default function PromocoesPage() {
                         <span className="text-fritz-green-800 font-extrabold tracking-tight">PREÇO FINAL PROMO</span>
                       </ThOrdenavel>
 
-                      <ThOrdenavel label="Custo Médio" sortKey="average" larguraInicial="130px" align="right" />
+                      <ThOrdenavel label="Custo Base (VlrUep)" sortKey="lastInboundPrice" larguraInicial="150px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                       
-                      <ThOrdenavel label="ICMS-(E)" sortKey="inboundIcms" larguraInicial="100px" align="right" />
-                      <ThOrdenavel label="PIS/COF-(E)" sortKey="inboundCofinsAndPis" larguraInicial="110px" align="right" />
-                      <ThOrdenavel label="IPI-(E)" sortKey="inboundIpi" larguraInicial="100px" align="right" />
-                      <ThOrdenavel label="Frete-(E)" sortKey="inboundFreight" larguraInicial="100px" align="right" />
+                      <ThOrdenavel label="ICMS-(E)" sortKey="inboundIcms" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="PIS/COF-(E)" sortKey="inboundCofinsAndPis" larguraInicial="110px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="IPI-(E)" sortKey="inboundIpi" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Frete-(E)" sortKey="inboundFreight" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
 
-                      <ThOrdenavel label="ICMS-(S)" sortKey="icms" larguraInicial="100px" align="right" />
-                      <ThOrdenavel label="IPI-(S)" sortKey="ipi" larguraInicial="100px" align="right" />
-                      <ThOrdenavel label="PIS-(S)" sortKey="pis" larguraInicial="100px" align="right" />
-                      <ThOrdenavel label="COFINS-(S)" sortKey="cofins" larguraInicial="110px" align="right" />
-                      <ThOrdenavel label="Frete-(S)" sortKey="freight" larguraInicial="100px" align="right" />
+                      <ThOrdenavel label="ICMS-(S)" sortKey="icms" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="IPI-(S)" sortKey="ipi" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="PIS-(S)" sortKey="pis" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="COFINS-(S)" sortKey="cofins" larguraInicial="110px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Frete-(S)" sortKey="freight" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
 
-                      <ThOrdenavel label="Custo Fixo" sortKey="fixedCoast" larguraInicial="100px" align="right" />
-                      <ThOrdenavel label="Comissão Int." sortKey="internalComission" larguraInicial="120px" align="right" />
-                      <ThOrdenavel label="Comissão Ext." sortKey="externalComission" larguraInicial="120px" align="right" />
-                      <ThOrdenavel label="Lucro Promo" sortKey="profit" larguraInicial="120px" align="right" />
+                      <ThOrdenavel label="Custo Fixo" sortKey="fixedCoast" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Comissão Int." sortKey="internalComission" larguraInicial="120px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Comissão Ext." sortKey="externalComission" larguraInicial="120px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Lucro Promo" sortKey="profit" larguraInicial="120px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-fritz-stone-100 bg-white">
-                    {produtosNoCarrinhoOrdenados.map((produtoBase) => {
-                      const rascunho = rascunhosPromo[produtoBase.code] || { ...produtoBase };
-                      const isSelecionadoOficina = selecionadosOficina.has(rascunho.code);
-                      
-                      // LÓGICA DO PREÇO SIMULADO (ANTES vs DEPOIS)
-                      const precoSimuladoOriginal = calcularPrecoSimulado(produtoBase);
-                      const precoSimuladoRealtime = calcularPrecoSimulado(rascunho);
-                      
-                      const isPrecoSimuladoDiferente = Math.abs(precoSimuladoRealtime - precoSimuladoOriginal) > 0.001;
-                      const precoFinalPromo = rascunho.basePricePromo !== undefined ? rascunho.basePricePromo : precoSimuladoRealtime;
-
-                      return (
-                        <tr key={rascunho.code} className={`transition-colors ${isSelecionadoOficina ? "bg-fritz-stone-50" : "hover:bg-fritz-stone-50/60"}`}>
-                          <td className="px-4 py-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
-                            <input type="checkbox" checked={isSelecionadoOficina} onChange={() => toggleSelecionarOficina(rascunho.code)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-stone-600 focus:ring-fritz-stone-600 cursor-pointer" />
-                          </td>
-                          <td className="px-4 py-2 truncate text-fritz-stone-600 align-middle text-xs" title={`${rascunho.familyCode || ''} - ${rascunho.familyDescription || 'Sem Família'}`}>
-                            {rascunho.familyCode && (
-                              <span className="inline-flex items-center justify-center rounded bg-fritz-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-fritz-stone-500 mr-2 border border-fritz-stone-200">
-                                {rascunho.familyCode}
-                              </span>
-                            )}
-                            {rascunho.familyDescription || "-"}
-                          </td>
-                          <td className="px-4 py-2 font-mono font-medium text-fritz-stone-800 align-middle">{rascunho.code}</td>
-                          <td className="px-4 py-2 truncate font-medium text-fritz-stone-900 align-middle">{rascunho.description}</td>
-                          
-                          {/* BLOCO DE PREÇOS REFINADO */}
-                          <td className="px-4 py-1.5 text-right font-extrabold text-fritz-bright-800 bg-fritz-bright-50/30 select-none align-middle group relative">
-                            
-                            {/* AÇÃO MICRO (LINHA A LINHA): Botão "Copiar para o Preço Final" */}
-                            <button
-                              onClick={() => handleEditPromo(produtoBase, "basePricePromo", precoSimuladoRealtime)}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded shadow-md border border-fritz-bright-200 text-fritz-bright-700 hover:bg-fritz-bright-700 hover:text-white z-10 scale-90 hover:scale-100"
-                              title="Copiar para Preço Final"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                            </button>
-
-                            <div className="flex flex-col items-end justify-center w-full transition-transform group-hover:translate-x-2">
-                              {isPrecoSimuladoDiferente && (
-                                <div className="flex items-center gap-1 text-[10px] text-fritz-stone-400 -mb-1 mt-1 pr-1">
-                                  <span className="line-through">{formatarMoeda(precoSimuladoOriginal)}</span>
-                                  {precoSimuladoRealtime > precoSimuladoOriginal ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                                  ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                  )}
-                                </div>
-                              )}
-                              <div className="w-full pr-1">
-                                {formatarMoeda(precoSimuladoRealtime)}
-                              </div>
+                    {produtosNoCarrinhoOrdenados.length === 0 ? (
+                      <tr>
+                        <td colSpan={20} className="px-6 py-20 text-center">
+                          <div className="mx-auto flex max-w-sm flex-col items-center">
+                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-fritz-stone-50 text-fritz-stone-400">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                             </div>
-                          </td>
+                            <h3 className="mb-1 text-lg font-bold text-fritz-stone-900">Nenhum produto no rascunho</h3>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      produtosNoCarrinhoOrdenados.map((produtoBase) => {
+                        const rascunho = rascunhosPromo[produtoBase.code] || { ...produtoBase };
+                        const isSelecionadoOficina = selecionadosOficina.has(rascunho.code);
+                        
+                        // LÓGICA DO PREÇO SIMULADO (ANTES vs DEPOIS)
+                        const precoSimuladoOriginal = calcularPrecoSimulado(produtoBase);
+                        const precoSimuladoRealtime = calcularPrecoSimulado(rascunho);
+                        
+                        const isPrecoSimuladoDiferente = Math.abs(precoSimuladoRealtime - precoSimuladoOriginal) > 0.001;
+                        const precoFinalPromo = rascunho.basePricePromo !== undefined ? rascunho.basePricePromo : precoSimuladoRealtime;
 
-                          <td className="px-4 py-1.5 font-black text-fritz-green-800 bg-fritz-green-50/30 align-middle">
-                            <CelulaInteligente tipo="moeda" align="right" valor={precoFinalPromo} onChange={(v: number) => handleEditPromo(produtoBase, "basePricePromo", v)} />
-                          </td>
+                        return (
+                          <tr key={rascunho.code} className={`transition-colors ${isSelecionadoOficina ? "bg-fritz-stone-50" : "hover:bg-fritz-stone-50/60"}`}>
+                            <td className="px-4 py-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                              <input type="checkbox" checked={isSelecionadoOficina} onChange={() => toggleSelecionarOficina(rascunho.code)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-stone-600 focus:ring-fritz-stone-600 cursor-pointer" />
+                            </td>
+                            <td className="px-4 py-2 truncate text-fritz-stone-600 align-middle text-xs" title={`${rascunho.familyCode || ''} - ${rascunho.familyDescription || 'Sem Família'}`}>
+                              {rascunho.familyCode && (
+                                <span className="inline-flex items-center justify-center rounded bg-fritz-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-fritz-stone-500 mr-2 border border-fritz-stone-200">
+                                  {rascunho.familyCode}
+                                </span>
+                              )}
+                              {rascunho.familyDescription || "-"}
+                            </td>
+                            <td className="px-4 py-2 font-mono font-medium text-fritz-stone-800 align-middle">{rascunho.code}</td>
+                            <td className="px-4 py-2 truncate font-medium text-fritz-stone-900 align-middle">{rascunho.description}</td>
+                            
+                            {/* BLOCO DE PREÇOS REFINADO */}
+                            <td className="px-4 py-1.5 text-right font-extrabold text-fritz-bright-800 bg-fritz-bright-50/30 select-none align-middle group relative">
+                              
+                              {/* AÇÃO MICRO (LINHA A LINHA): Botão "Copiar para o Preço Final" */}
+                              <button
+                                onClick={() => handleEditPromo(produtoBase, "basePricePromo", precoSimuladoRealtime)}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded shadow-md border border-fritz-bright-200 text-fritz-bright-700 hover:bg-fritz-bright-700 hover:text-white z-10 scale-90 hover:scale-100"
+                                title="Copiar para Preço Final"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                              </button>
 
-                          <td className="px-4 py-2 font-medium text-right text-fritz-stone-600 align-middle">
-                            <CelulaInteligente tipo="moeda" align="right" valor={rascunho.average} onChange={(v: number) => handleEditPromo(produtoBase, "average", v)} />
-                          </td>
+                              <div className="flex flex-col items-end justify-center w-full transition-transform group-hover:translate-x-2">
+                                {isPrecoSimuladoDiferente && (
+                                  <div className="flex items-center gap-1 text-[10px] text-fritz-stone-400 -mb-1 mt-1 pr-1">
+                                    <span className="line-through">{formatarMoeda(precoSimuladoOriginal)}</span>
+                                    {precoSimuladoRealtime > precoSimuladoOriginal ? (
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                    ) : (
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="w-full pr-1">
+                                  {formatarMoeda(precoSimuladoRealtime)}
+                                </div>
+                              </div>
+                            </td>
 
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIcms} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIcms", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundCofinsAndPis} onChange={(v: number) => handleEditPromo(produtoBase, "inboundCofinsAndPis", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIpi} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIpi", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundFreight} onChange={(v: number) => handleEditPromo(produtoBase, "inboundFreight", v)} /></td>
+                            <td className="px-4 py-1.5 font-black text-fritz-green-800 bg-fritz-green-50/30 align-middle">
+                              <CelulaInteligente tipo="moeda" align="right" valor={precoFinalPromo} onChange={(v: number) => handleEditPromo(produtoBase, "basePricePromo", v)} />
+                            </td>
 
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.icms} onChange={(v: number) => handleEditPromo(produtoBase, "icms", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.ipi} onChange={(v: number) => handleEditPromo(produtoBase, "ipi", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.pis} onChange={(v: number) => handleEditPromo(produtoBase, "pis", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.cofins} onChange={(v: number) => handleEditPromo(produtoBase, "cofins", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.freight} onChange={(v: number) => handleEditPromo(produtoBase, "freight", v)} /></td>
+                            <td className="px-4 py-2 font-medium text-right text-fritz-stone-600 align-middle">
+                              <CelulaInteligente tipo="moeda" align="right" valor={rascunho.lastInboundPrice} onChange={(v: number) => handleEditPromo(produtoBase, "lastInboundPrice", v)} />
+                            </td>
 
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.fixedCoast} onChange={(v: number) => handleEditPromo(produtoBase, "fixedCoast", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.internalComission} onChange={(v: number) => handleEditPromo(produtoBase, "internalComission", v)} /></td>
-                          <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.externalComission} onChange={(v: number) => handleEditPromo(produtoBase, "externalComission", v)} /></td>
-                          
-                          <td className="px-4 py-1.5 align-middle font-semibold text-fritz-stone-800">
-                            <CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.profit} onChange={(v: number) => handleEditPromo(produtoBase, "profit", v)} />
-                          </td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIcms} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIcms", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundCofinsAndPis} onChange={(v: number) => handleEditPromo(produtoBase, "inboundCofinsAndPis", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIpi} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIpi", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundFreight} onChange={(v: number) => handleEditPromo(produtoBase, "inboundFreight", v)} /></td>
 
-                        </tr>
-                      );
-                    })}
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.icms} onChange={(v: number) => handleEditPromo(produtoBase, "icms", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.ipi} onChange={(v: number) => handleEditPromo(produtoBase, "ipi", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.pis} onChange={(v: number) => handleEditPromo(produtoBase, "pis", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.cofins} onChange={(v: number) => handleEditPromo(produtoBase, "cofins", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.freight} onChange={(v: number) => handleEditPromo(produtoBase, "freight", v)} /></td>
+
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.fixedCoast} onChange={(v: number) => handleEditPromo(produtoBase, "fixedCoast", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.internalComission} onChange={(v: number) => handleEditPromo(produtoBase, "internalComission", v)} /></td>
+                            <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.externalComission} onChange={(v: number) => handleEditPromo(produtoBase, "externalComission", v)} /></td>
+                            
+                            <td className="px-4 py-1.5 align-middle font-semibold text-fritz-stone-800">
+                              <CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.profit} onChange={(v: number) => handleEditPromo(produtoBase, "profit", v)} />
+                            </td>
+
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
