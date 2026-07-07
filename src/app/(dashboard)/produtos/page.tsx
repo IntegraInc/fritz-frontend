@@ -279,6 +279,7 @@ export default function ProdutosPage() {
   const [buscaFamilia, setBuscaFamilia] = useState("");
 
   const [pagina, setPagina] = useState(1);
+  const [registrosPorPagina, setRegistrosPorPagina] = useState(50);
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalRegistros, setTotalRegistros] = useState(0);
   
@@ -332,7 +333,8 @@ export default function ProdutosPage() {
     termoAtual = busca, 
     familiaAtual = buscaFamilia, 
     novosCamposOrd?: string[], 
-    novaDirecaoOrd?: "asc" | "desc"
+    novaDirecaoOrd?: "asc" | "desc",
+    novaQtd = registrosPorPagina
   ) {
     if (!contexto) return;
     setLoading(true);
@@ -340,7 +342,6 @@ export default function ProdutosPage() {
       const token = localStorage.getItem("token");
       
       const currentOrderBy = novosCamposOrd || orderBy;
-      
       // AQUI: Sem "De-Para"! Enviamos o nome limpo (ex: "description", "average") direto pro Júlio
       const finalOrderBy = currentOrderBy.length > 0 
         ? currentOrderBy.map(field => ({ field })) 
@@ -350,7 +351,7 @@ export default function ProdutosPage() {
         company: String(contexto.empresa.id), // Forçando como String igual ao CURL do Júlio
         page: novaPagina,
         searchParameters: termoAtual,
-        recordsPerPage: 50,
+        recordsPerPage: novaQtd,
         ordenationType: novaDirecaoOrd || ordenationType,
         orderBy: finalOrderBy
       };
@@ -424,7 +425,8 @@ export default function ProdutosPage() {
           inboundFreight: r.inboundFreight,
           fixedCoast: r.fixedCoast,
           basePrice: r.basePrice,
-          inboundInvoicePrice: r.inboundInvoicePrice
+          inboundInvoicePrice: r.inboundInvoicePrice,
+          lastInboundPrice: r.lastInboundPrice // <-- Envia o novo campo atualizado
         }))
       };
 
@@ -645,7 +647,7 @@ export default function ProdutosPage() {
                       onChange={(e) => setBulkField(e.target.value as keyof Product)}
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
                     >
-                      <option value="average">Custo Migrado (R$)</option>
+                      <option value="lastInboundPrice">Custo Migrado (R$)</option>
                       <option value="fixedCoast">Custo Fixo (%)</option>
                       <option value="inboundIcms">ICMS - Entrada (%)</option>
                       <option value="inboundCofinsAndPis">PIS/COFINS - Entrada (%)</option>
@@ -761,7 +763,9 @@ export default function ProdutosPage() {
                   <ThOrdenavel label="Data Últ. Entrada" sortKey="lastInboundDate" larguraInicial="140px" align="center" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                   <ThOrdenavel label="Última Entrada" sortKey="lastInboundPrice" larguraInicial="140px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                   <ThOrdenavel label="Preço Estoque" sortKey="inboundInvoicePrice" larguraInicial="140px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                  
                   <ThOrdenavel label="Custo migrado" sortKey="average" larguraInicial="140px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                  
                   <ThOrdenavel label="Preço Venda" sortKey="basePrice" larguraInicial="160px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                   
                   <ThOrdenavel label="ICMS-(E)" sortKey="inboundIcms" larguraInicial="110px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
@@ -829,6 +833,13 @@ export default function ProdutosPage() {
                     const isEditado = !!rascunhos[produtoBase.code];
                     const produto = isEditado ? rascunhos[produtoBase.code] : produtoBase;
                     const isSelecionado = selecionados.has(produto.code);
+                    
+                    // Exibição híbrida para o Custo Migrado:
+                    // Se foi editado e tem lastInboundPrice no rascunho, mostra o novo lastInboundPrice.
+                    // Caso contrário, mostra o average original.
+                    const valorExibicaoCustoMigrado = (isEditado && rascunhos[produtoBase.code].lastInboundPrice !== undefined)
+                      ? rascunhos[produtoBase.code].lastInboundPrice 
+                      : produtoBase.average;
 
                     return (
                       <tr 
@@ -881,8 +892,15 @@ export default function ProdutosPage() {
                         <td className="px-4 py-4 align-middle font-medium text-fritz-stone-600 text-right select-none">
                           {formatarMoeda(produto.inboundInvoicePrice)}
                         </td>
+                        
                         <td className="px-4 py-4 align-middle font-medium text-fritz-bright-700">
-                          <CelulaInteligente tipo="moeda" align="right" valor={produto.average} onChange={(val: number) => handleEdit(produtoBase, "average", val)} />
+                          {/* Modificação Custo Migrado */}
+                          <CelulaInteligente 
+                            tipo="moeda" 
+                            align="right" 
+                            valor={valorExibicaoCustoMigrado} 
+                            onChange={(val: number) => handleEdit(produtoBase, "lastInboundPrice", val)} 
+                          />
                         </td>
                         
                         <td className="px-4 py-4 align-middle font-bold text-fritz-green-700 text-right select-none">
@@ -928,9 +946,41 @@ export default function ProdutosPage() {
           {/* RODAPÉ FIXO DE PAGINAÇÃO COM BOTÕES DUPLOS (PRIMEIRA/ÚLTIMA PÁGINA) */}
           {produtos.length > 0 && (
             <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0">
-              <div className="text-sm text-fritz-stone-500 flex items-center gap-3">
-                <span>Mostrando <span className="font-semibold text-fritz-stone-900">{produtos.length}</span> de <span className="font-semibold text-fritz-stone-900">{totalRegistros}</span> resultados</span>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-fritz-stone-500 hidden md:block">
+                  Mostrando <span className="font-semibold text-fritz-stone-900">{produtos.length}</span> de <span className="font-semibold text-fritz-stone-900">{totalRegistros}</span> resultados
+                </span>
+                
+                <div className="h-4 w-px bg-fritz-stone-200 mx-1 hidden md:block"></div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-fritz-stone-500 font-medium whitespace-nowrap">Por página:</span>
+                  <div className="relative">
+                    <select 
+                      value={registrosPorPagina} 
+                      onChange={(e) => {
+                        const qtd = Number(e.target.value);
+                        setRegistrosPorPagina(qtd);
+                        buscarProdutos(1, busca, buscaFamilia, orderBy, ordenationType, qtd);
+                      }}
+                      className="appearance-none rounded-lg border border-fritz-stone-200 bg-fritz-stone-50 pl-3 pr-8 py-1.5 text-xs font-bold text-fritz-stone-700 outline-none transition-colors hover:bg-white focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100 cursor-pointer"
+                    >
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                      <option value={200}>200</option>
+                      <option value={300}>300</option>
+                      <option value={500}>500</option>
+                      <option value={1000}>1000</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-fritz-stone-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               </div>
+
               <div className="flex items-center gap-1.5">
                 <button 
                   onClick={() => mudarPagina(1)} 
