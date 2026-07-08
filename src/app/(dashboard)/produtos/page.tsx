@@ -454,6 +454,15 @@ export default function ProdutosPage() {
   function handleEdit(produtoBase: Product, campo: keyof Product, valor: any) {
     setRascunhos(prev => {
       const produtoAtual = prev[produtoBase.code] || { ...produtoBase };
+      
+      // Regra dupla: Atualiza MedPon (average) e VlrUep (inboundInvoicePrice) simultaneamente
+      if (campo === "average" || campo === "inboundInvoicePrice") {
+        return { 
+          ...prev, 
+          [produtoBase.code]: { ...produtoAtual, average: valor, inboundInvoicePrice: valor } 
+        };
+      }
+
       return { ...prev, [produtoBase.code]: { ...produtoAtual, [campo]: valor } };
     });
   }
@@ -486,7 +495,12 @@ export default function ProdutosPage() {
       selecionados.forEach(codigo => {
         const produtoOriginal = produtos.find(p => p.code === codigo) || novosRascunhos[codigo];
         if (produtoOriginal) {
-          novosRascunhos[codigo] = { ...produtoOriginal, [bulkField]: novoValor };
+          // Regra dupla para a edição em lote do modal
+          if (bulkField === "average" || bulkField === "inboundInvoicePrice") {
+            novosRascunhos[codigo] = { ...produtoOriginal, average: novoValor, inboundInvoicePrice: novoValor };
+          } else {
+            novosRascunhos[codigo] = { ...produtoOriginal, [bulkField]: novoValor };
+          }
         }
       });
       return novosRascunhos;
@@ -647,7 +661,7 @@ export default function ProdutosPage() {
                       onChange={(e) => setBulkField(e.target.value as keyof Product)}
                       className="w-full rounded-xl border border-fritz-stone-200 bg-fritz-stone-50 px-4 py-3 text-sm text-fritz-stone-900 outline-none focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100"
                     >
-                      <option value="lastInboundPrice">Custo Migrado (R$)</option>
+                      <option value="inboundInvoicePrice">Custo Migrado (R$)</option>
                       <option value="fixedCoast">Custo Fixo (%)</option>
                       <option value="inboundIcms">ICMS - Entrada (%)</option>
                       <option value="inboundCofinsAndPis">PIS/COFINS - Entrada (%)</option>
@@ -835,10 +849,10 @@ export default function ProdutosPage() {
                     const isSelecionado = selecionados.has(produto.code);
                     
                     // Exibição híbrida para o Custo Migrado:
-                    // Se foi editado e tem lastInboundPrice no rascunho, mostra o novo lastInboundPrice.
+                    // Se foi editado e tem inboundInvoicePrice no rascunho, mostra o novo inboundInvoicePrice.
                     // Caso contrário, mostra o average original.
-                    const valorExibicaoCustoMigrado = (isEditado && rascunhos[produtoBase.code].lastInboundPrice !== undefined)
-                      ? rascunhos[produtoBase.code].lastInboundPrice 
+                    const valorExibicaoCustoMigrado = (isEditado && rascunhos[produtoBase.code].inboundInvoicePrice !== undefined)
+                      ? rascunhos[produtoBase.code].inboundInvoicePrice 
                       : produtoBase.average;
 
                     return (
@@ -899,7 +913,7 @@ export default function ProdutosPage() {
                             tipo="moeda" 
                             align="right" 
                             valor={valorExibicaoCustoMigrado} 
-                            onChange={(val: number) => handleEdit(produtoBase, "lastInboundPrice", val)} 
+                            onChange={(val: number) => handleEdit(produtoBase, "inboundInvoicePrice", val)} 
                           />
                         </td>
                         
