@@ -776,7 +776,7 @@ export default function ProdutosPage() {
                   
                   <ThOrdenavel label="Data Últ. Entrada" sortKey="lastInboundDate" larguraInicial="140px" align="center" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                   <ThOrdenavel label="Última Entrada" sortKey="lastInboundPrice" larguraInicial="140px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
-                  <ThOrdenavel label="Preço Estoque" sortKey="inboundInvoicePrice" larguraInicial="140px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                  <ThOrdenavel label="Base cálculo" sortKey="inboundInvoicePrice" larguraInicial="140px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                   
                   <ThOrdenavel label="Custo migrado" sortKey="average" larguraInicial="140px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                   

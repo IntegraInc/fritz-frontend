@@ -280,6 +280,7 @@ export default function PromocoesPage() {
   const [busca, setBusca] = useState(""); 
   const [buscaFamilia, setBuscaFamilia] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [registrosPorPagina, setRegistrosPorPagina] = useState(50);
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalRegistros, setTotalRegistros] = useState(0);
   
@@ -362,7 +363,8 @@ export default function PromocoesPage() {
     termoAtual = busca, 
     familiaAtual = buscaFamilia, 
     novosCamposOrd?: string[], 
-    novaDirecaoOrd?: "asc" | "desc"
+    novaDirecaoOrd?: "asc" | "desc",
+    novaQtd = registrosPorPagina
   ) {
     if (!contexto) return;
     setLoading(true);
@@ -378,7 +380,7 @@ export default function PromocoesPage() {
         company: String(contexto.empresa.id), 
         page: novaPagina, 
         searchParameters: termoAtual, 
-        recordsPerPage: 50,
+        recordsPerPage: novaQtd,
         ordenationType: novaDirecaoOrd || ordenationType,
         orderBy: finalOrderBy
       };
@@ -495,8 +497,8 @@ export default function PromocoesPage() {
   }, [busca, buscaFamilia, contexto, loadingContexto, autorizado, modoTela]);
 
   function calcularPrecoSimulado(p: Product) {
-    // Forçando a utilização do Valor Última Entrada do Produto (E075PRO.USU_VlrUep / lastInboundPrice)
-    let precoMedio = p.lastInboundPrice || 0;
+    // Forçando a utilização do Valor Última Entrada do Produto (E075PRO.USU_VlrUep / inboundInvoicePrice)
+    let precoMedio = p.inboundInvoicePrice || p.average || 0;
     
     const pctIcmEnt = p.inboundIcms || 0;
     const pctPccEnt = p.inboundCofinsAndPis || 0;
@@ -530,6 +532,15 @@ export default function PromocoesPage() {
   function handleEditPromo(produtoBase: Product, campo: keyof Product, valor: any) {
     setRascunhosPromo(prev => {
       const produtoAtual = prev[produtoBase.code] || { ...produtoBase };
+      
+      // Regra dupla: Atualiza MedPon (average) e VlrUep (inboundInvoicePrice) simultaneamente
+      if (campo === "average" || campo === "inboundInvoicePrice") {
+        return { 
+          ...prev, 
+          [produtoBase.code]: { ...produtoAtual, average: valor, inboundInvoicePrice: valor } 
+        };
+      }
+
       return { ...prev, [produtoBase.code]: { ...produtoAtual, [campo]: valor } };
     });
   }
@@ -560,7 +571,12 @@ export default function PromocoesPage() {
         const produtoOriginal = produtosSelecionados.get(codigo);
         if (produtoOriginal) {
           const base = novosRascunhos[codigo] || produtoOriginal;
-          novosRascunhos[codigo] = { ...base, [bulkPromoField]: novoValor };
+          
+          if (bulkPromoField === "average" || bulkPromoField === "inboundInvoicePrice") {
+            novosRascunhos[codigo] = { ...base, average: novoValor, inboundInvoicePrice: novoValor };
+          } else {
+            novosRascunhos[codigo] = { ...base, [bulkPromoField]: novoValor };
+          }
         }
       });
       return novosRascunhos;
@@ -853,7 +869,7 @@ export default function PromocoesPage() {
     setOrdenationType(newDirection);
     
     if (passoAtual === 1) {
-      buscarProdutos(1, busca, buscaFamilia, newOrderBy, newDirection);
+      buscarProdutos(1, busca, buscaFamilia, newOrderBy, newDirection, registrosPorPagina);
     }
   }
 
@@ -862,7 +878,7 @@ export default function PromocoesPage() {
     setOrderBy(defaultOrderBy);
     setOrdenationType("asc");
     if (passoAtual === 1) {
-      buscarProdutos(1, busca, buscaFamilia, defaultOrderBy, "asc");
+      buscarProdutos(1, busca, buscaFamilia, defaultOrderBy, "asc", registrosPorPagina);
     }
   }
 
@@ -1041,7 +1057,7 @@ export default function PromocoesPage() {
                       <ThOrdenavel label="Código" sortKey="code" larguraInicial="140px" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                       <ThOrdenavel label="Descrição do Produto" sortKey="description" larguraInicial="400px" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                       
-                      <ThOrdenavel label="Custo Base (VlrUep)" sortKey="lastInboundPrice" larguraInicial="160px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Custo Base (VlrUep)" sortKey="inboundInvoicePrice" larguraInicial="160px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                       <ThOrdenavel label="Preço Base Atual" sortKey="basePrice" larguraInicial="180px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                     </tr>
                   </thead>
@@ -1083,7 +1099,7 @@ export default function PromocoesPage() {
                             </td>
                             <td className="px-4 py-3 truncate align-middle font-medium">{produto.code}</td>
                             <td className="px-4 py-3 align-middle truncate">{produto.description}</td>
-                            <td className="px-4 py-3 align-middle font-medium text-fritz-stone-600 text-right">{formatarMoeda(produto.lastInboundPrice)}</td>
+                            <td className="px-4 py-3 align-middle font-medium text-fritz-stone-600 text-right">{formatarMoeda(produto.inboundInvoicePrice)}</td>
                             <td className="px-4 py-3 align-middle font-bold text-fritz-stone-800 text-right">{formatarMoeda(produto.basePrice)}</td>
                           </tr>
                         );
@@ -1093,39 +1109,81 @@ export default function PromocoesPage() {
                 </table>
               </div>
 
-              {/* RODAPÉ FIXO NA GRID DO PASSO 1 */}
+{/* RODAPÉ FIXO NA GRID DO PASSO 1 */}
               {produtos.length > 0 && (
-                <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0 gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm text-fritz-stone-500 hidden md:block">
+                <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0 gap-4 flex-wrap md:flex-nowrap">
+                  
+                  {/* BLOCO 1: ESQUERDA (Info + Select + Limpar) */}
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm text-fritz-stone-500 hidden md:block whitespace-nowrap">
                       Mostrando <span className="font-semibold text-fritz-stone-900">{produtos.length}</span> de <span className="font-semibold text-fritz-stone-900">{totalRegistros}</span> resultados
                     </div>
+                    
+                    <div className="h-4 w-px bg-fritz-stone-200 mx-1 hidden md:block"></div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-fritz-stone-500 font-medium whitespace-nowrap">Por página:</span>
+                      <div className="relative">
+                        <select 
+                          value={registrosPorPagina} 
+                          onChange={(e) => {
+                            const qtd = Number(e.target.value);
+                            setRegistrosPorPagina(qtd);
+                            buscarProdutos(1, busca, buscaFamilia, orderBy, ordenationType, qtd);
+                          }}
+                          className="appearance-none rounded-lg border border-fritz-stone-200 bg-fritz-stone-50 pl-3 pr-8 py-1.5 text-xs font-bold text-fritz-stone-700 outline-none transition-colors hover:bg-white focus:border-fritz-bright-600 focus:bg-white focus:ring-2 focus:ring-fritz-bright-100 cursor-pointer w-full"
+                        >
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                          <option value={200}>200</option>
+                          <option value={300}>300</option>
+                          <option value={500}>500</option>
+                          <option value={1000}>1000</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-fritz-stone-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
                     {quantidadeCarrinho > 0 && (
-                      <button type="button" onClick={() => setProdutosSelecionados(new Map())} className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors px-2 py-1">
+                      <button type="button" onClick={() => setProdutosSelecionados(new Map())} className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors px-2 py-1 whitespace-nowrap ml-2">
                         Limpar Seleção ({quantidadeCarrinho})
                       </button>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={() => mudarPagina(1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Primeira Página">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
-                    </button>
-                    <button onClick={() => mudarPagina(pagina - 1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Página Anterior">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    </button>
-                    <span className="text-sm font-medium text-fritz-stone-700 px-3 whitespace-nowrap">Página {pagina} de {totalPaginas || 1}</span>
-                    <button onClick={() => mudarPagina(pagina + 1)} disabled={pagina >= totalPaginas} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Próxima Página">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                    </button>
-                    <button onClick={() => mudarPagina(totalPaginas)} disabled={pagina >= totalPaginas || totalPaginas === 0} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Última Página">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
-                    </button>
+                  {/* BLOCO 2: DIREITA (Paginação + Botão Principal) */}
+                  <div className="flex items-center gap-6">
+                    
+                    {/* Paginação */}
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => mudarPagina(1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Primeira Página">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+                      </button>
+                      <button onClick={() => mudarPagina(pagina - 1)} disabled={pagina === 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Página Anterior">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </button>
+                      <span className="text-sm font-medium text-fritz-stone-700 px-3 whitespace-nowrap">Página {pagina} de {totalPaginas || 1}</span>
+                      <button onClick={() => mudarPagina(pagina + 1)} disabled={pagina >= totalPaginas} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Próxima Página">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                      <button onClick={() => mudarPagina(totalPaginas)} disabled={pagina >= totalPaginas || totalPaginas === 0} className="flex h-9 w-9 items-center justify-center rounded-lg border border-fritz-stone-200 text-fritz-stone-600 hover:bg-fritz-stone-50 disabled:opacity-50 transition-colors" title="Última Página">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+                      </button>
+                    </div>
+
+                    {/* Divisória visual sutil entre a paginação e o botão */}
+                    <div className="h-6 w-px bg-fritz-stone-200 hidden md:block"></div>
+
+                    {/* Botão de Ação */}
+                    <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2 rounded-xl font-semibold shadow-sm transition-all whitespace-nowrap">
+                      Configurar Campanha ({quantidadeCarrinho})
+                    </Button>
                   </div>
 
-                  <Button onClick={abrirModalSetup} disabled={quantidadeCarrinho === 0} className="bg-fritz-bright-700 hover:bg-fritz-bright-800 disabled:bg-fritz-stone-300 disabled:text-fritz-stone-500 text-white px-8 py-2 rounded-xl font-semibold shadow-sm transition-all whitespace-nowrap">
-                    Configurar Campanha ({quantidadeCarrinho})
-                  </Button>
                 </div>
               )}
             </div>
@@ -1298,6 +1356,7 @@ export default function PromocoesPage() {
               </div>
             )}
 
+            {/* BARRA FLUTUANTE DE AÇÕES */}
             {selecionadosOficina.size > 0 && (
               <div className="absolute top-2 left-0 right-0 z-50 flex justify-center w-full pointer-events-none">
                 <div className="bg-fritz-stone-900 text-white rounded-full px-6 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.3)] flex items-center gap-4 animate-in slide-in-from-top-4 fade-in duration-300 border border-fritz-stone-700 pointer-events-auto">
@@ -1389,6 +1448,8 @@ export default function PromocoesPage() {
                           <option value="internalComission">Comissão Interna (%)</option>
                           <option value="fixedCoast">Custo Fixo (%)</option>
                           <option value="basePricePromo">Forçar Preço Final (R$)</option>
+                          <option value="inboundInvoicePrice">Custo Base (VlrUep) (R$)</option>
+                          <option value="average">Custo Médio (R$)</option>
                           <option value="inboundIcms">ICMS - Entrada (%)</option>
                           <option value="inboundCofinsAndPis">PIS/COFINS - Entrada (%)</option>
                           <option value="icms">ICMS - Saída (%)</option>
@@ -1454,7 +1515,8 @@ export default function PromocoesPage() {
                         <span className="text-fritz-green-800 font-extrabold tracking-tight">PREÇO FINAL PROMO</span>
                       </ThOrdenavel>
 
-                      <ThOrdenavel label="Custo Base (VlrUep)" sortKey="lastInboundPrice" larguraInicial="150px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Custo Base (VlrUep)" sortKey="inboundInvoicePrice" larguraInicial="150px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
+                      <ThOrdenavel label="Custo Médio" sortKey="average" larguraInicial="130px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                       
                       <ThOrdenavel label="ICMS-(E)" sortKey="inboundIcms" larguraInicial="100px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
                       <ThOrdenavel label="PIS/COF-(E)" sortKey="inboundCofinsAndPis" larguraInicial="110px" align="right" orderBy={orderBy} ordenationType={ordenationType} onSort={handleSort} />
@@ -1547,7 +1609,11 @@ export default function PromocoesPage() {
                             </td>
 
                             <td className="px-4 py-2 font-medium text-right text-fritz-stone-600 align-middle">
-                              <CelulaInteligente tipo="moeda" align="right" valor={rascunho.lastInboundPrice} onChange={(v: number) => handleEditPromo(produtoBase, "lastInboundPrice", v)} />
+                              <CelulaInteligente tipo="moeda" align="right" valor={rascunho.inboundInvoicePrice} onChange={(v: number) => handleEditPromo(produtoBase, "inboundInvoicePrice", v)} />
+                            </td>
+                            
+                            <td className="px-4 py-2 font-medium text-right text-fritz-stone-600 align-middle">
+                              <CelulaInteligente tipo="moeda" align="right" valor={rascunho.average} onChange={(v: number) => handleEditPromo(produtoBase, "average", v)} />
                             </td>
 
                             <td className="px-4 py-2 align-middle"><CelulaInteligente tipo="porcentagem" align="right" valor={rascunho.inboundIcms} onChange={(v: number) => handleEditPromo(produtoBase, "inboundIcms", v)} /></td>
