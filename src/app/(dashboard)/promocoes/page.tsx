@@ -163,7 +163,34 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') e.currentTarget.blur();
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Evita o comportamento padrão do Enter
+      const input = e.currentTarget;
+      const currentTd = input.closest('td');
+      
+      input.blur(); // Salva o valor da célula atual
+
+      // Lógica para pular para a célula de baixo na mesma coluna
+      if (currentTd) {
+        const currentTr = currentTd.parentElement as HTMLTableRowElement;
+        const tdIndex = Array.from(currentTr.children).indexOf(currentTd);
+        const nextTr = currentTr.nextElementSibling as HTMLTableRowElement;
+
+        if (nextTr) {
+          const nextTd = nextTr.children[tdIndex] as HTMLTableCellElement;
+          if (nextTd) {
+            // Pequeno delay para dar tempo do React renderizar a célula novamente
+            setTimeout(() => {
+              const nextEditDiv = nextTd.querySelector('[tabindex="0"]') as HTMLElement;
+              if (nextEditDiv) {
+                nextEditDiv.focus();
+                nextEditDiv.click(); // Dispara a edição da próxima célula
+              }
+            }, 50);
+          }
+        }
+      }
+    }
   };
 
   let exibicao = valor === null ? "-" : valor;

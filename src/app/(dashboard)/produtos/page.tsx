@@ -139,38 +139,50 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
   const handleBlur = () => {
     setEditando(false);
     let novoValor: any = valorInput;
-    if (tipo === "moeda" || tipo === "porcentagem" || tipo === "number") {
-      novoValor = novoValor === "" ? 0 : parseFloat(novoValor);
-    }
+    if (tipo === "moeda" || tipo === "porcentagem" || tipo === "number") novoValor = novoValor === "" ? 0 : parseFloat(novoValor);
     onChange(novoValor);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') e.currentTarget.blur();
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Evita qualquer comportamento padrão
+      const input = e.currentTarget;
+      const currentTd = input.closest('td');
+      
+      input.blur(); // Salva o valor da célula atual
+
+      // Lógica para pular para a célula de baixo na mesma coluna
+      if (currentTd) {
+        const currentTr = currentTd.parentElement as HTMLTableRowElement;
+        const tdIndex = Array.from(currentTr.children).indexOf(currentTd);
+        const nextTr = currentTr.nextElementSibling as HTMLTableRowElement;
+
+        if (nextTr) {
+          const nextTd = nextTr.children[tdIndex] as HTMLTableCellElement;
+          if (nextTd) {
+            // Um pequeno delay para dar tempo do React renderizar a célula novamente
+            setTimeout(() => {
+              const nextEditDiv = nextTd.querySelector('[tabindex="0"]') as HTMLElement;
+              if (nextEditDiv) {
+                nextEditDiv.focus();
+                nextEditDiv.click(); // Dispara o setEditando(true) da próxima célula
+              }
+            }, 50);
+          }
+        }
+      }
+    }
   };
 
   let exibicao = valor === null ? "-" : valor;
-  if (tipo === "moeda") {
-    exibicao = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(valor) || 0);
-  } else if (tipo === "porcentagem") {
-    exibicao = `${Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
-  }
+  if (tipo === "moeda") exibicao = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(valor) || 0);
+  else if (tipo === "porcentagem") exibicao = `${Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 
   if (editando) {
     return (
-      <div className={`flex items-center gap-1 bg-white ring-2 ring-fritz-bright-600 rounded shadow-sm px-2 py-1 -mx-2`}>
+      <div className={`flex items-center h-[32px] gap-1 bg-white ring-2 ring-fritz-bright-600 rounded shadow-sm px-2 py-1 -mx-2`}>
         {prefixo && tipo !== 'moeda' && <span className="text-fritz-stone-400 text-xs font-semibold">{prefixo}</span>}
-        <input
-          type={tipo === "text" ? "text" : "number"}
-          step="any"
-          autoFocus
-          onFocus={(e) => e.target.select()}
-          value={valorInput}
-          onChange={(e) => setValorInput(e.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          className={`bg-transparent outline-none !border-0 !ring-0 !shadow-none text-fritz-stone-900 ${align === "right" ? "text-right" : "text-left"} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium w-full p-0 m-0`}
-        />
+        <input type={tipo === "text" ? "text" : "number"} step="any" autoFocus onFocus={(e) => e.target.select()} value={valorInput} onChange={(e) => setValorInput(e.target.value)} onBlur={handleBlur} onKeyDown={handleKeyDown} className={`bg-transparent outline-none !border-0 !ring-0 !shadow-none text-fritz-stone-900 ${align === "right" ? "text-right" : "text-left"} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium w-full p-0 m-0`} />
         {sufixo && tipo !== 'porcentagem' && <span className="text-fritz-stone-400 text-xs font-semibold">{sufixo}</span>}
       </div>
     );
@@ -181,7 +193,7 @@ const CelulaInteligente = ({ valor, tipo = "text", prefixo, sufixo, onChange, al
       tabIndex={0}
       onFocus={() => setEditando(true)}
       onClick={() => setEditando(true)} 
-      className={`cursor-text border border-transparent hover:border-fritz-stone-200 hover:bg-white focus:bg-white focus:ring-2 focus:ring-fritz-bright-600 focus:outline-none rounded px-2 py-1 -mx-2 text-sm text-fritz-stone-700 transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
+      className={`cursor-text border border-transparent hover:border-black/10 hover:bg-white focus:bg-white focus:ring-2 focus:ring-fritz-bright-600 focus:outline-none rounded px-2 py-1 -mx-2 text-sm text-current transition-colors ${tipo !== 'text' ? 'font-medium' : ''} ${align === "right" ? "text-right" : "text-left"}`}
     >
       {exibicao}
     </div>
