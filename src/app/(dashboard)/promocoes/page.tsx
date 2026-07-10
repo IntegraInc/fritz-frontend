@@ -588,7 +588,7 @@ export default function PromocoesPage() {
     setSelecionadosOficina(novos);
   }
 
-  function aplicarEdicaoEmMassaPromo(e: FormEvent) {
+ function aplicarEdicaoEmMassaPromo(e: FormEvent) {
     e.preventDefault();
     const novoValor = parseFloat(bulkPromoValue);
     
@@ -611,8 +611,8 @@ export default function PromocoesPage() {
     
     setIsBulkPromoOpen(false);
     setBulkPromoValue("");
-    setSelecionadosOficina(new Set());
-    showToast(`${selecionadosOficina.size} itens atualizados com sucesso!`, "success");
+    // A seleção não é mais limpa aqui, permitindo aplicar novos campos em lote nos mesmos itens
+    showToast(`Campo aplicado a ${selecionadosOficina.size} itens! A seleção foi mantida.`, "success");
   }
 
   function aplicarDescontoEmMassa(e: FormEvent) {

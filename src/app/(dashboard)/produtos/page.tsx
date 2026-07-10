@@ -520,7 +520,8 @@ export default function ProdutosPage() {
     
     setIsBulkOpen(false);
     setBulkValue("");
-    setSelecionados(new Set());
+    // A seleção não é mais limpa aqui, permitindo edições consecutivas
+    showToast(`Campo aplicado a ${selecionados.size} itens! A seleção foi mantida.`, "success");
   }
 
   useEffect(() => {
