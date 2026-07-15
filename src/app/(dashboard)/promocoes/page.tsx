@@ -1563,7 +1563,7 @@ export default function PromocoesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-fritz-stone-100 bg-white">
-                    {produtosNoCarrinhoOrdenados.length === 0 ? (
+                  {produtosNoCarrinhoOrdenados.length === 0 ? (
                       <tr>
                         <td colSpan={20} className="px-6 py-20 text-center">
                           <div className="mx-auto flex max-w-sm flex-col items-center">
@@ -1575,7 +1575,7 @@ export default function PromocoesPage() {
                         </td>
                       </tr>
                     ) : (
-                      produtosNoCarrinhoOrdenados.map((produtoBase) => {
+                      produtosNoCarrinhoOrdenados.map((produtoBase, index) => {
                         const rascunho = rascunhosPromo[produtoBase.code] || { ...produtoBase };
                         const isSelecionadoOficina = selecionadosOficina.has(rascunho.code);
                         
@@ -1586,8 +1586,23 @@ export default function PromocoesPage() {
                         const isPrecoSimuladoDiferente = Math.abs(precoSimuladoRealtime - precoSimuladoOriginal) > 0.001;
                         const precoFinalPromo = rascunho.basePricePromo !== undefined ? rascunho.basePricePromo : produtoBase.basePrice;
 
+                        // POSICIONAMENTO INTELIGENTE DO TOOLTIP
+                        const isPrimeiro = index === 0;
+                        const isUltimo = index === produtosNoCarrinhoOrdenados.length - 1 && produtosNoCarrinhoOrdenados.length > 1;
+
+                        let tooltipPosition = "top-1/2 -translate-y-1/2";
+                        let arrowPosition = "top-1/2 -translate-y-1/2";
+
+                        if (isPrimeiro) {
+                          tooltipPosition = "-top-2";
+                          arrowPosition = "top-3";
+                        } else if (isUltimo) {
+                          tooltipPosition = "-bottom-2";
+                          arrowPosition = "bottom-3";
+                        }
+
                         return (
-                          <tr key={rascunho.code} className={`transition-colors ${isSelecionadoOficina ? "bg-fritz-stone-50" : "hover:bg-fritz-stone-50/60"}`}>
+                          <tr key={rascunho.code} className={`transition-colors relative hover:z-40 ${isSelecionadoOficina ? "bg-fritz-stone-50" : "hover:bg-fritz-stone-50/60"}`}>
                             <td className="px-4 py-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
                               <input type="checkbox" checked={isSelecionadoOficina} onChange={() => toggleSelecionarOficina(rascunho.code)} className="h-4 w-4 rounded border-fritz-stone-300 text-fritz-stone-600 focus:ring-fritz-stone-600 cursor-pointer" />
                             </td>
@@ -1605,27 +1620,45 @@ export default function PromocoesPage() {
                             {/* BLOCO DE PREÇOS REFINADO */}
                             <td className="px-4 py-1.5 text-right font-extrabold text-fritz-bright-800 bg-fritz-bright-50/30 select-none align-middle group relative">
                               
-                              {/* AÇÃO MICRO (LINHA A LINHA): Botão "Copiar para o Preço Final" */}
                               <button
                                 onClick={() => handleEditPromo(produtoBase, "basePricePromo", precoSimuladoRealtime)}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded shadow-md border border-fritz-bright-200 text-fritz-bright-700 hover:bg-fritz-bright-700 hover:text-white z-10 scale-90 hover:scale-100"
+                                className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all bg-white p-1.5 rounded shadow-md border border-fritz-bright-200 text-fritz-bright-700 hover:bg-fritz-bright-700 hover:text-white z-0 scale-90 hover:scale-100"
                                 title="Copiar para Preço Final"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                               </button>
 
-                              <div className="flex flex-col items-end justify-center w-full transition-transform group-hover:translate-x-2">
+                              <div className="relative z-10 flex flex-col items-end justify-center w-full transition-transform group-hover:translate-x-2">
                                 {isPrecoSimuladoDiferente && (
-                                  <div className="flex items-center gap-1 text-[10px] text-fritz-stone-400 -mb-1 mt-1 pr-1">
-                                    <span className="line-through">{formatarMoeda(precoSimuladoOriginal)}</span>
+                                  <div className={`relative group/tooltip flex items-center gap-1.5 mb-1 pr-1.5 pl-2 py-0.5 rounded-md shadow-sm border text-[10px] font-bold mr-1 cursor-help z-20 hover:z-[60] ${precoSimuladoRealtime > precoSimuladoOriginal ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                                    <span className="line-through opacity-75">{formatarMoeda(precoSimuladoOriginal)}</span>
                                     {precoSimuladoRealtime > precoSimuladoOriginal ? (
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
                                     ) : (
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                     )}
+
+                                    <div className={`absolute right-[calc(100%+8px)] ${tooltipPosition} w-max max-w-[220px] opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 bg-fritz-stone-900 text-white text-xs rounded-xl p-3.5 shadow-2xl border border-fritz-stone-700 text-left pointer-events-none cursor-default`}>
+                                      <div className="font-black text-fritz-stone-300 mb-2 border-b border-fritz-stone-700 pb-1.5 uppercase tracking-wider text-[9px]">Análise da Simulação</div>
+                                      <div className="flex justify-between gap-6 mt-1.5">
+                                        <span className="text-fritz-stone-400">Base Original:</span>
+                                        <span className="font-medium text-fritz-stone-100">{formatarMoeda(precoSimuladoOriginal)}</span>
+                                      </div>
+                                      <div className="flex justify-between gap-6 mt-1">
+                                        <span className="text-fritz-stone-400">Novo Simulado:</span>
+                                        <span className={`font-bold ${precoSimuladoRealtime > precoSimuladoOriginal ? 'text-green-400' : 'text-red-400'}`}>{formatarMoeda(precoSimuladoRealtime)}</span>
+                                      </div>
+                                      <div className="flex justify-between gap-6 mt-2 pt-2 border-t border-fritz-stone-700/80">
+                                        <span className="text-fritz-stone-400">Impacto final:</span>
+                                        <span className={`font-black ${precoSimuladoRealtime > precoSimuladoOriginal ? 'text-green-400' : 'text-red-400'}`}>
+                                          {precoSimuladoRealtime > precoSimuladoOriginal ? '+' : ''}{formatarMoeda(precoSimuladoRealtime - precoSimuladoOriginal)}
+                                        </span>
+                                      </div>
+                                      <div className={`absolute left-full -ml-[1px] border-[6px] border-transparent border-l-fritz-stone-900 ${arrowPosition}`}></div>
+                                    </div>
                                   </div>
                                 )}
-                                <div className="w-full pr-1">
+                                <div className="w-full pr-1 text-[13px]">
                                   {formatarMoeda(precoSimuladoRealtime)}
                                 </div>
                               </div>
