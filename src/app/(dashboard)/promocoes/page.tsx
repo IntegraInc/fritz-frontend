@@ -276,8 +276,6 @@ export default function PromocoesPage() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
-  const [autorizado, setAutorizado] = useState<boolean | null>(null);
-
   const [modoTela, setModoTela] = useState<'NOVA' | 'RASCUNHOS'>('NOVA');
   const [passoAtual, setPassoAtual] = useState(1);
   const [modalValidadeAberto, setModalValidadeAberto] = useState(false);
@@ -337,12 +335,6 @@ export default function PromocoesPage() {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
   };
 
-  useEffect(() => {
-    const usuario = localStorage.getItem("usuario")?.toLowerCase() || "";
-    if (usuario === "suporte" || usuario === "jair") setAutorizado(true);
-    else setAutorizado(false);
-  }, []);
-
   const carregarDadosIniciais = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -379,11 +371,11 @@ export default function PromocoesPage() {
   };
 
   useEffect(() => {
-    if (autorizado) {
+    if (contexto) {
       carregarDadosIniciais();
       carregarParametrosRascunho();
     }
-  }, [contexto, autorizado]);
+  }, [contexto]);
 
   async function buscarProdutos(
     novaPagina = 1, 
@@ -518,10 +510,10 @@ export default function PromocoesPage() {
   }
 
   useEffect(() => {
-    if (!autorizado || !contexto || loadingContexto || modoTela === 'RASCUNHOS') return;
+    if (!contexto || loadingContexto || modoTela === 'RASCUNHOS') return;
     const temporizadorDebounce = setTimeout(() => { buscarProdutos(1, busca, buscaFamilia); setPagina(1); }, 500); 
     return () => clearTimeout(temporizadorDebounce);
-  }, [busca, buscaFamilia, contexto, loadingContexto, autorizado, modoTela]);
+  }, [busca, buscaFamilia, contexto, loadingContexto, modoTela]);
 
   function calcularPrecoSimulado(p: Product) {
     // Forçando a utilização do Valor Última Entrada do Produto (E075PRO.USU_VlrUep / inboundInvoicePrice)
@@ -942,25 +934,6 @@ export default function PromocoesPage() {
     if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
     return dataStr;
   };
-
-  if (autorizado === false) {
-    return (
-      <div className="flex min-h-screen bg-fritz-stone-50 w-full items-center justify-center">
-        <div className="text-center p-8 max-w-lg bg-white rounded-3xl shadow-sm border border-fritz-stone-200">
-           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-fritz-stone-100 text-fritz-stone-400 mb-6">
-             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-           </div>
-           <h2 className="text-2xl font-black text-fritz-stone-900 mb-2">Módulo em Desenvolvimento</h2>
-           <p className="text-fritz-stone-500 mb-8">O Gerador de Promoções está em fase final de testes internos e em breve estará disponível para sua conta.</p>
-           <div className="flex w-full justify-center">
-             <Button onClick={() => window.location.href = '/produtos'} className="bg-fritz-stone-800 hover:bg-fritz-stone-900 text-white py-3 px-8 rounded-xl font-bold">
-               Voltar para a Tabela Principal
-             </Button>
-           </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-screen bg-fritz-stone-50 w-full relative overflow-hidden">
@@ -1563,7 +1536,7 @@ export default function PromocoesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-fritz-stone-100 bg-white">
-                  {produtosNoCarrinhoOrdenados.length === 0 ? (
+                    {produtosNoCarrinhoOrdenados.length === 0 ? (
                       <tr>
                         <td colSpan={20} className="px-6 py-20 text-center">
                           <div className="mx-auto flex max-w-sm flex-col items-center">
