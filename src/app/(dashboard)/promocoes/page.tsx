@@ -721,7 +721,7 @@ export default function PromocoesPage() {
         .filter(p => selecionadosOficina.has(p.code))
         .map(p => {
           const r = rascunhosPromo[p.code] || p;
-          const precoSimulado = r.basePricePromo !== undefined ? r.basePricePromo : calcularPrecoSimulado(r);
+          const precoFinal = r.basePricePromo !== undefined ? r.basePricePromo : p.basePrice;
           
           return {
             code: String(r.code),
@@ -740,7 +740,7 @@ export default function PromocoesPage() {
             inboundFreight: Number(r.inboundFreight) || 0,
             fixedCoast: Number(r.fixedCoast) || 0,
             inboundInvoicePrice: Number(r.inboundInvoicePrice) || 0,
-            basePrice: Number(precoSimulado) ? parseFloat(Number(precoSimulado).toFixed(2)) : 0
+            basePrice: Number(precoFinal) ? parseFloat(Number(precoFinal).toFixed(2)) : 0
           };
       })
     };
@@ -1136,7 +1136,7 @@ export default function PromocoesPage() {
                 </table>
               </div>
 
-{/* RODAPÉ FIXO NA GRID DO PASSO 1 */}
+              {/* RODAPÉ FIXO NA GRID DO PASSO 1 */}
               {produtos.length > 0 && (
                 <div className="flex items-center justify-between border-t border-fritz-stone-100 bg-white px-6 py-3 shrink-0 gap-4 flex-wrap md:flex-nowrap">
                   
@@ -1584,7 +1584,7 @@ export default function PromocoesPage() {
                         const precoSimuladoRealtime = calcularPrecoSimulado(rascunho);
                         
                         const isPrecoSimuladoDiferente = Math.abs(precoSimuladoRealtime - precoSimuladoOriginal) > 0.001;
-                        const precoFinalPromo = rascunho.basePricePromo !== undefined ? rascunho.basePricePromo : precoSimuladoRealtime;
+                        const precoFinalPromo = rascunho.basePricePromo !== undefined ? rascunho.basePricePromo : produtoBase.basePrice;
 
                         return (
                           <tr key={rascunho.code} className={`transition-colors ${isSelecionadoOficina ? "bg-fritz-stone-50" : "hover:bg-fritz-stone-50/60"}`}>
